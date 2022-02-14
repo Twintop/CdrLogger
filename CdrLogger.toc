@@ -12,7 +12,7 @@
 ## X-Website: https://github.com/Twintop/CdrLogger
 ## X-Curse-Project-ID: 
 ## X-WoWI-ID: 
-## X-Wago-ID: 
+## X-Wago-ID: q96dpP6O
 
 Functions.lua
 CdrLogger.lua
