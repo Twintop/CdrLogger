@@ -16,6 +16,7 @@ CdrLogger.Data.specId = 0
 CdrLogger.Data.characterGuid = UnitGUID("player")
 CdrLogger.Data.enabled = false
 
+
 -- Frames
 local containerFrame = CreateFrame("Frame", "CdrLoggerFrame", UIParent, "BackdropTemplate")
 local combatFrame = CreateFrame("Frame", nil, containerFrame, "BackdropTemplate")
@@ -37,7 +38,7 @@ end
 function timerFrame:onUpdate(sinceLastUpdate)
     local currentTime = GetTime()
     self.sinceLastUpdate = self.sinceLastUpdate + sinceLastUpdate
-    if self.sinceLastUpdate >= 0.05 then -- in seconds
+    if self.sinceLastUpdate >= 0.01 then -- in seconds
         for x, v in pairs(trackedSpells) do
 ---@diagnostic disable-next-line: redundant-parameter
             local startTime, duration, _, _ = GetSpellCooldown(trackedSpells[x].id)
@@ -45,7 +46,7 @@ function timerFrame:onUpdate(sinceLastUpdate)
                 local actualDuration = currentTime - trackedSpells[x].startTime
                 local durationDelta = currentTime - trackedSpells[x].originalEndTime
                 local updateDurationDelta = currentTime - trackedSpells[x].latestEndTime
-                print("OFF CD: " .. trackedSpells[x].name .. " -- Actual = " .. actualDuration .. " | Original Delta = " .. durationDelta .. " | LatestChange Delta = " .. updateDurationDelta)
+                print("OFF CD: " .. trackedSpells[x].name .. " -- Actual = " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Original Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " | LatestChange Delta = " .. CdrLogger.Functions:RoundTo(updateDurationDelta, 3, floor))
                 trackedSpells[x] = nil
             else
                 local previousRemainingTime = trackedSpells[x].latestEndTime - currentTime
@@ -58,7 +59,7 @@ function timerFrame:onUpdate(sinceLastUpdate)
                 local latestRemainingTime = trackedSpells[x].latestEndTime - currentTime
 
                 if previousRemainingTime ~= latestRemainingTime then
-                    print("CD CHANGE: " .. trackedSpells[x].name .. " -- " .. previousRemainingTime .. "-" .. latestRemainingTime .. " = " .. previousRemainingTime - latestRemainingTime)
+                    print("CD CHANGE: " .. trackedSpells[x].name .. " -- " .. CdrLogger.Functions:RoundTo(previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(previousRemainingTime - latestRemainingTime, 3, floor))
                 end
             end
         end
@@ -78,7 +79,7 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
             for x, v in pairs(spells) do
                 if spellId == tonumber(v) then
                     if type == "SPELL_CAST_SUCCESS" then
-                        C_Timer.After(0.05, function()
+                        C_Timer.After(0.01, function()
 ---@diagnostic disable-next-line: redundant-parameter
                             local startTime, duration, _, _ = GetSpellCooldown(spellId)
                             local name, _, icon = GetSpellInfo(spellId)
@@ -93,7 +94,7 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
                                 latestEndTime = duration + startTime,
                                 lastUpdatedTime = currentTime
                             }
-                            print("ON CD: " .. name .. " -- " .. duration .. "|" .. startTime+duration)
+                            print("ON CD: " .. name .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor) .. " | " .. CdrLogger.Functions:RoundTo(startTime+duration, 3, floor))
                         end)
                     end
                 end
@@ -131,3 +132,4 @@ containerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
     end
 end)
+
