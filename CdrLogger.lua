@@ -64,8 +64,10 @@ function timerFrame:onUpdate(sinceLastUpdate)
 
                 local originalRemainingTime = trackedSpells[x].originalEndTime - currentTime
                 local latestRemainingTime = trackedSpells[x].latestEndTime - currentTime
-
-                if previousRemainingTime ~= latestRemainingTime then
+                
+                if gcdLockRemaining == latestRemainingTime then
+                    CooldownFinished(x)
+                elseif previousRemainingTime ~= latestRemainingTime then
                     print("CD CHANGE: " .. trackedSpells[x].name .. " -- " .. CdrLogger.Functions:RoundTo(previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(previousRemainingTime - latestRemainingTime, 3, floor))
                 end
             end
