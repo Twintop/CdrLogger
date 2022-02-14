@@ -12,6 +12,36 @@ function CdrLogger.Functions:TableLength(T)
 	return count
 end
 
+function CdrLogger.Functions:TablePrint(T, indent)
+	if not indent then
+		indent = 0
+	end
+
+	local toprint = string.rep(" ", indent) .. "{\r\n"
+	indent = indent + 2
+	for k, v in pairs(T) do
+		toprint = toprint .. string.rep(" ", indent)
+		if (type(k) == "number") then
+			toprint = toprint .. "[" .. k .. "] = "
+		elseif (type(k) == "string") then
+			toprint = toprint  .. k ..  "= "
+		end
+
+		if (type(v) == "number") then
+			toprint = toprint .. v .. ",\r\n"
+		elseif (type(v) == "string") then
+			toprint = toprint .. "\"" .. v .. "\",\r\n"
+		elseif (type(v) == "table") then
+			toprint = toprint .. CdrLogger.Functions:TablePrint(v, indent + 2) .. ",\r\n"
+		else
+			toprint = toprint .. "\"" .. tostring(v) .. "\",\r\n"
+		end
+	end
+
+	toprint = toprint .. string.rep(" ", indent-2) .. "}"
+	return toprint
+end
+
 function CdrLogger.Functions:RoundTo(num, numDecimalPlaces, mode)
     numDecimalPlaces = math.max(numDecimalPlaces or 0, 0)
     local newNum = tonumber(num)
@@ -225,8 +255,12 @@ function CdrLogger.Functions:MergeSettings(settings, user)
 		return settings
 	end
 
-	for k, v in pairs(user) do        
-        if (type(v) == "table") and (type(settings[k] or false) == "table") then
+	for k, v in pairs(user) do
+        -- For spell lists, we won't update/merge changes in here.
+        -- TODO: Add/remove spells to be included as defaults manually through pseudo-migrations instead.
+        if k == "spells" then
+            settings[k] = v
+        elseif (type(v) == "table") and (type(settings[k] or false) == "table") then
             CdrLogger.Functions:MergeSettings(settings[k], user[k])
         else
             settings[k] = v
@@ -383,20 +417,22 @@ function SlashCmdList.CDRLOGGER(msg)
     if cmd == "add" then
         local spellId = CdrLogger.Functions:ParseCmdString(subcmd)
         local result = CdrLogger.Functions:AddTrackedSpell(CdrLogger.Data.className, CdrLogger.Data.specName, spellId)
+        local name, _, icon = GetSpellInfo(spellId)
 
         if result then
-            print("Added spell #", spellId, "to", CdrLogger.Data.specName, CdrLogger.Data.className, ".")
+            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in adding spell |T" .. icon .. ":0|t " .. name .. " (" .. spellId .. ") to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         else
-            print("Failed to add spell #", spellId, "to", CdrLogger.Data.specName, CdrLogger.Data.className, ".")
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add spell |T" .. icon .. ":0|t " .. name .. " (" .. spellId .. ") to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         end
     elseif cmd == "remove" then
         local spellId = CdrLogger.Functions:ParseCmdString(subcmd)
         local result = CdrLogger.Functions:RemoveTrackedSpell(CdrLogger.Data.className, CdrLogger.Data.specName, spellId)
+        local name, _, icon = GetSpellInfo(spellId)
 
         if result then
-            print("Removed spell #", spellId, "from", CdrLogger.Data.specName, CdrLogger.Data.className, ".")
+            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in removing spell |T" .. icon .. ":0|t " .. name .. " (" .. spellId .. ") from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         else
-            print("Failed to remove spell #", spellId, "from", CdrLogger.Data.specName, CdrLogger.Data.className, ".")
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove spell |T" .. icon .. ":0|t " .. name .. " (" .. spellId .. ") to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         end
     elseif cmd == "start" or cmd == "on" then
         CdrLogger.Data.enabled = true
@@ -405,8 +441,21 @@ function SlashCmdList.CDRLOGGER(msg)
         CdrLogger.Data.enabled = false
         CdrLogger:EventRegistration()
     elseif cmd == "list" then
+        print("|cFF0000FFCDRL: |rTracked spells for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className)
+        local spells = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells
 
+        for x, v in pairs(spells) do
+            local name, _, icon = GetSpellInfo(v)
+            print("|T"..icon..":0|t " .. name .. " (" .. v .. ")")
+        end
+    elseif cmd == "clear" then
+        CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = {}
+        print("|cFF0000FFCDRL: |rTracked spells for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " cleared.")
+    elseif cmd == "reset" then
+        local default = CdrLogger.Functions:GetDefaultSettings()
+        CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = default[CdrLogger.Data.className][CdrLogger.Data.specName].spells
+        print("|cFF0000FFCDRL: |rTracked spells for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " reset to defaults.")
     else
-        print("Cooldown Reduction Logger (/cdrl) -- Available commands: on, off, add, remove, list")
+        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add, remove, clear, reset, list")
     end
 end

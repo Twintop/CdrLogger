@@ -3,15 +3,14 @@
 ## Author: Twintop
 ## X-AuthorServer: Frostmourne-US/OCE
 ## Version: 9.1.5.0
-## X-ReleaseType: alpha01
-## X-ReleaseDate: February 13, 2022
+## X-ReleaseType: release
+## X-ReleaseDate: February 14, 2022
 ## SavedVariables: CdrLoggerSettings
 ## DefaultState: enabled
 ## Notes: Logs events for spells that are affected by cooldown reduction.
-## X-Category: 
+## X-Category: combat
 ## X-Website: https://github.com/Twintop/CdrLogger
-## X-Curse-Project-ID: 
-## X-WoWI-ID: 
+## X-Curse-Project-ID: 579843
 ## X-Wago-ID: q96dpP6O
 
 Functions.lua
