@@ -166,7 +166,8 @@ function CdrLogger.Functions:GetDefaultSettings()
                     "2050",
                     "34861",
                     "88625",
-                    "265202"
+                    "265202",
+                    "64843"
                 }
             },
             SHADOW = {
