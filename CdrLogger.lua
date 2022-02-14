@@ -16,7 +16,6 @@ CdrLogger.Data.specId = 0
 CdrLogger.Data.characterGuid = UnitGUID("player")
 CdrLogger.Data.enabled = false
 
-
 -- Frames
 local containerFrame = CreateFrame("Frame", "CdrLoggerFrame", UIParent, "BackdropTemplate")
 local combatFrame = CreateFrame("Frame", nil, containerFrame, "BackdropTemplate")
@@ -132,4 +131,3 @@ containerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
     end
 end)
-
