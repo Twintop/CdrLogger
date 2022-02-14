@@ -40,7 +40,7 @@ local function CooldownFinished(x)
     local actualDuration = currentTime - trackedSpells[x].startTime
     local durationDelta = currentTime - trackedSpells[x].originalEndTime
     local updateDurationDelta = currentTime - trackedSpells[x].latestEndTime
-    print("OFF CD: " .. trackedSpells[x].name .. " -- Actual = " .. actualDuration .. " | Original Delta = " .. durationDelta .. " | LatestChange Delta = " .. updateDurationDelta)
+    print("OFF CD: " .. trackedSpells[x].name .. " -- Actual = " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Original Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " | LatestChange Delta = " .. CdrLogger.Functions:RoundTo(updateDurationDelta, 3, floor))
     trackedSpells[x] = nil
 end
 
@@ -65,10 +65,8 @@ function timerFrame:onUpdate(sinceLastUpdate)
                 local originalRemainingTime = trackedSpells[x].originalEndTime - currentTime
                 local latestRemainingTime = trackedSpells[x].latestEndTime - currentTime
 
-                if gcdLockRemaining == latestRemainingTime then
-                    CooldownFinished(x)
-                elseif previousRemainingTime ~= latestRemainingTime then
-                    print("CD CHANGE: " .. trackedSpells[x].name .. " -- " .. previousRemainingTime .. "-" .. latestRemainingTime .. " = " .. previousRemainingTime - latestRemainingTime)
+                if previousRemainingTime ~= latestRemainingTime then
+                    print("CD CHANGE: " .. trackedSpells[x].name .. " -- " .. CdrLogger.Functions:RoundTo(previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(previousRemainingTime - latestRemainingTime, 3, floor))
                 end
             end
         end
@@ -103,7 +101,7 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
                                 latestEndTime = duration + startTime,
                                 lastUpdatedTime = currentTime
                             }
-                            print("ON CD: " .. name .. " -- " .. duration .. "|" .. startTime+duration)
+                            print("ON CD: " .. name .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor) .. " | " .. CdrLogger.Functions:RoundTo(startTime+duration, 3, floor))
                         end)
                     end
                 end
