@@ -1,5 +1,6 @@
 local _, CdrLogger = ...
 local trackedSpells = {}
+local updateInterval = 0.01
 
 CdrLogger = CdrLogger or {}
 CdrLogger.Data = CdrLogger.Data or {}
@@ -34,20 +35,27 @@ function CdrLogger:EventRegistration()
     end
 end
 
+local function CooldownFinished(x)
+    local currentTime = GetTime()
+    local actualDuration = currentTime - trackedSpells[x].startTime
+    local durationDelta = currentTime - trackedSpells[x].originalEndTime
+    local updateDurationDelta = currentTime - trackedSpells[x].latestEndTime
+    print("OFF CD: " .. trackedSpells[x].name .. " -- Actual = " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Original Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " | LatestChange Delta = " .. CdrLogger.Functions:RoundTo(updateDurationDelta, 3, floor))
+    trackedSpells[x] = nil
+end
+
 function timerFrame:onUpdate(sinceLastUpdate)
     local currentTime = GetTime()
     self.sinceLastUpdate = self.sinceLastUpdate + sinceLastUpdate
-    if self.sinceLastUpdate >= 0.01 then -- in seconds
+    if self.sinceLastUpdate >= updateInterval then -- in seconds
         for x, v in pairs(trackedSpells) do
 ---@diagnostic disable-next-line: redundant-parameter
             local startTime, duration, _, _ = GetSpellCooldown(trackedSpells[x].id)
+
             if startTime == 0 then
-                local actualDuration = currentTime - trackedSpells[x].startTime
-                local durationDelta = currentTime - trackedSpells[x].originalEndTime
-                local updateDurationDelta = currentTime - trackedSpells[x].latestEndTime
-                print("OFF CD: " .. trackedSpells[x].name .. " -- Actual = " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Original Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " | LatestChange Delta = " .. CdrLogger.Functions:RoundTo(updateDurationDelta, 3, floor))
-                trackedSpells[x] = nil
+                CooldownFinished(x)
             else
+                local gcdLockRemaining = CdrLogger.Functions:GetCurrentGCDLockRemaining()
                 local previousRemainingTime = trackedSpells[x].latestEndTime - currentTime
 
                 trackedSpells[x].lastUpdatedTime = currentTime
@@ -78,7 +86,7 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
             for x, v in pairs(spells) do
                 if spellId == tonumber(v) then
                     if type == "SPELL_CAST_SUCCESS" then
-                        C_Timer.After(0.01, function()
+                        C_Timer.After(updateInterval, function()
 ---@diagnostic disable-next-line: redundant-parameter
                             local startTime, duration, _, _ = GetSpellCooldown(spellId)
                             local name, _, icon = GetSpellInfo(spellId)

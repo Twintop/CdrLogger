@@ -60,6 +60,34 @@ function CdrLogger.Functions:RoundTo(num, numDecimalPlaces, mode)
     return tonumber(string.format("%." .. numDecimalPlaces .. "f", newNum))
 end
 
+function CdrLogger.Functions:GetCurrentGCDLockRemaining()
+---@diagnostic disable-next-line: redundant-parameter
+    local startTime, duration, _ = GetSpellCooldown(61304);
+    return (startTime + duration - GetTime())
+end
+
+function CdrLogger.Functions:GetCurrentGCDTime(floor)
+	if floor == nil then
+		floor = false
+	end
+
+	local haste = UnitSpellHaste("player") / 100
+
+	local gcd = 1.5 / (1 + haste)
+
+	if not floor and gcd < 0.75 then
+		gcd = 0.75
+	end
+
+	return gcd
+end
+function CdrLogger.Functions:GetLatency()
+	--local down, up, lagHome, lagWorld = GetNetStats()
+	local _, _, _, lagWorld = GetNetStats()
+	local latency = lagWorld / 1000
+	return latency
+end
+
 function CdrLogger.Functions:GetDefaultSettings()
     local defaultSettings = {
         DEATHKNIGHT = {
