@@ -21,25 +21,66 @@ function CdrLogger:EventRegistration()
     if CdrLogger.Data.enabled then
         timerFrame:SetScript("OnUpdate", function(self, sinceLastUpdate) timerFrame:onUpdate(sinceLastUpdate) end)
         combatFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        print("|cFF0000FFCDRL: |rCDR logging |cFF00FF00enabled|r.")
+        print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFF00FF00enabled|r.")
     else
         timerFrame:SetScript("OnUpdate", nil)
         combatFrame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        print("|cFF0000FFCDRL: |rCDR logging |cFFFF0000disabled|r.")
+        print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFFFF0000disabled|r.")
     end
 end
 
-local function CooldownFinished(x)
-    local currentTime = GetTime()
+local function GetOutputTimeIfAny(timeInput)
+    if CdrLogger.Data.settings.core.time.showTimestamps then
+        return "[" .. CdrLogger.Functions:GetOutputTime(timeInput) .. "] "
+    end
+    return ""
+end
+
+local function CooldownChanged(snapshot)
+    local x = snapshot.id
+    if snapshot.latestRemainingTime < 0 then
+        print(snapshot.latestRemainingTime, snapshot.previousRemainingTime)
+        snapshot.latestRemainingTime = snapshot.previousRemainingTime
+    end
+
+    print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. CdrLogger.Functions:GetOutputSpell(trackedSpells[x]) .. " -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
+end
+
+local function CooldownFinished(x, currentTime, outputTime)
+    currentTime = currentTime or GetTime()
+    
     local actualDuration = currentTime - trackedSpells[x].startTime
+    local originalDuration = trackedSpells[x].originalDuration
     local durationDelta = currentTime - trackedSpells[x].originalEndTime
     local updateDurationDelta = currentTime - trackedSpells[x].latestEndTime
-    print("|cFFFF00FFOFF CD: |r|T" .. trackedSpells[x].icon .. ":0|t " .. trackedSpells[x].name .. " -- Actual = " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Original Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " | LatestChange Delta = " .. CdrLogger.Functions:RoundTo(updateDurationDelta, 3, floor))
+    
+    local previousRemainingTime = trackedSpells[x].latestEndTime - currentTime
+
+    trackedSpells[x].lastUpdatedTime = currentTime
+    trackedSpells[x].latestDuration = 0
+    trackedSpells[x].latestEndTime = currentTime
+
+    local originalRemainingTime = trackedSpells[x].originalEndTime - currentTime
+    local latestRemainingTime = trackedSpells[x].latestEndTime - currentTime
+
+    local snapshot = {
+        id = x,
+        currentTime = currentTime,
+        outputTime = outputTime,
+        previousRemainingTime = previousRemainingTime,
+        originalRemainingTime = originalRemainingTime,
+        latestRemainingTime = latestRemainingTime
+    }
+
+    CooldownChanged(snapshot)
+    
+    print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. CdrLogger.Functions:GetOutputSpell(trackedSpells[x]) .. " -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
     trackedSpells[x] = nil
 end
 
 function timerFrame:onUpdate(sinceLastUpdate)
     local currentTime = GetTime()
+    local osTimestamp = date()
     self.sinceLastUpdate = self.sinceLastUpdate + sinceLastUpdate
     if self.sinceLastUpdate >= updateInterval then -- in seconds
         for x, v in pairs(trackedSpells) do
@@ -58,11 +99,25 @@ function timerFrame:onUpdate(sinceLastUpdate)
 
                 local originalRemainingTime = trackedSpells[x].originalEndTime - currentTime
                 local latestRemainingTime = trackedSpells[x].latestEndTime - currentTime
+
+                local outputTime = currentTime
+                if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
+                    outputTime = osTimestamp
+                end
                 
                 if gcdLockRemaining == latestRemainingTime then
-                    CooldownFinished(x)
+                    CooldownFinished(x, currentTime, outputTime)
                 elseif previousRemainingTime ~= latestRemainingTime then
-                    print("|cFFFF00FFCD CHANGE: |r|T" .. trackedSpells[x].icon .. ":0|t " .. trackedSpells[x].name .. " -- " .. CdrLogger.Functions:RoundTo(previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(previousRemainingTime - latestRemainingTime, 3, floor))
+                    local snapshot = {
+                        id = x,
+                        currentTime = currentTime,
+                        outputTime = outputTime,
+                        previousRemainingTime = previousRemainingTime,
+                        originalRemainingTime = originalRemainingTime,
+                        latestRemainingTime = latestRemainingTime
+                    }
+
+                    CooldownChanged(snapshot)
                 end
             end
         end
@@ -74,6 +129,7 @@ combatFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 combatFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
 		local currentTime = GetTime()
+        local osTimestamp = date()
         local time, type, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, spellName = CombatLogGetCurrentEventInfo()
         
         if sourceGUID == CdrLogger.Data.characterGuid then
@@ -97,7 +153,11 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
                                 latestEndTime = duration + startTime,
                                 lastUpdatedTime = currentTime
                             }
-                            print("|cFFFF00FFON CD: |r|T" .. icon .. ":0|t " .. name .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor) .. " | " .. CdrLogger.Functions:RoundTo(startTime+duration, 3, floor))
+                            local outputTime = currentTime
+                            if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
+                                outputTime = osTimestamp
+                            end
+                            print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. CdrLogger.Functions:GetOutputSpell(trackedSpells[spellId]) .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor))
                         end)
                     end
                 end

@@ -90,6 +90,20 @@ function CdrLogger.Functions:RoundTo(num, numDecimalPlaces, mode)
     return tonumber(string.format("%." .. numDecimalPlaces .. "f", newNum))
 end
 
+function CdrLogger.Functions:IsNumeric(data)
+    if type(data) == "number" then
+        return true
+    elseif type(data) ~= "string" then
+        return false
+    end
+    data = strtrim(data)
+    local x, y = string.find(data, "[%d+][%.?][%d*]")
+    if x and x == 1 and y == strlen(data) then
+        return true
+    end
+    return false
+end
+
 function CdrLogger.Functions:GetCurrentGCDLockRemaining()
 ---@diagnostic disable-next-line: redundant-parameter
     local startTime, duration, _ = GetSpellCooldown(61304);
@@ -118,8 +132,59 @@ function CdrLogger.Functions:GetLatency()
 	return latency
 end
 
+function CdrLogger.Functions:GetOutputTime(timeInput)
+    local timeType = "os"
+    if not timeInput then
+        if CdrLogger.Data.settings.core.time.usePreciseTimestamps then
+            timeInput = GetTime()
+            timeType = "uptime"
+        else
+            timeInput = date()
+            timeType = "os"
+        end
+    else
+        if CdrLogger.Functions:IsNumeric(timeInput) then
+            timeType = "uptime"
+        else
+            timeType = "os"
+        end
+    end
+
+    if timeType == "uptime" then
+        return CdrLogger.Functions:RoundTo(timeInput, CdrLogger.Data.settings.core.time.precision, "floor")
+    else
+        --local dow, month, day, time, year = strsplit(".", timeInput, 5)
+        local _, _, _, time, _ = strsplit(" ", timeInput, 5)
+        return time
+    end
+end
+
+function CdrLogger.Functions:GetOutputSpell(trackedSpell, includeId)
+    if trackedSpell ~= nil then
+        local id = ""
+        if includeId then
+            id = " (" .. trackedSpell.id .. ")"
+        end
+        return "|Hspell:" .. trackedSpell.id .. "|h[|T" .. trackedSpell.icon .. ":0|t " .. trackedSpell.name .. "]|h" .. id
+    end
+    return ""
+end
+
 function CdrLogger.Functions:GetDefaultSettings()
     local defaultSettings = {
+        core = {
+            time = {
+                showTimestamps = true,
+                usePreciseTimestamps = true,
+                precision = 3
+            },
+            colors = {
+                cdStart = "FFFF00FF",
+                cdChange = "FFFF00FF",
+                cdEnd = "FFFF00FF",
+                status = "FF0000FF"
+            }
+        },
         DEATHKNIGHT = {
             BLOOD = {
                 spells = {}
@@ -435,21 +500,31 @@ function SlashCmdList.CDRLOGGER(msg)
         local spellId = CdrLogger.Functions:ParseCmdString(subcmd)
         local result = CdrLogger.Functions:AddTrackedSpell(CdrLogger.Data.className, CdrLogger.Data.specName, spellId)
         local name, _, icon = GetSpellInfo(spellId)
+        local spell = {
+            id = spellId,
+            name = name,
+            icon = icon
+        }
 
         if result then
-            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in adding spell |T" .. icon .. ":0|t " .. name .. " (" .. spellId .. ") to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in adding spell " .. CdrLogger.Functions:GetOutputSpell(spell, true) .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add spell |T" .. icon .. ":0|t " .. name .. " (" .. spellId .. ") to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add spell " .. CdrLogger.Functions:GetOutputSpell(spell, true) .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         end
     elseif cmd == "remove" then
         local spellId = CdrLogger.Functions:ParseCmdString(subcmd)
         local result = CdrLogger.Functions:RemoveTrackedSpell(CdrLogger.Data.className, CdrLogger.Data.specName, spellId)
         local name, _, icon = GetSpellInfo(spellId)
+        local spell = {
+            id = spellId,
+            name = name,
+            icon = icon
+        }
 
         if result then
-            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in removing spell |T" .. icon .. ":0|t " .. name .. " (" .. spellId .. ") from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in removing spell " .. CdrLogger.Functions:GetOutputSpell(spell, true) .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove spell |T" .. icon .. ":0|t " .. name .. " (" .. spellId .. ") to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove spell " .. CdrLogger.Functions:GetOutputSpell(spell, true) .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         end
     elseif cmd == "start" or cmd == "on" then
         CdrLogger.Data.enabled = true
@@ -463,7 +538,12 @@ function SlashCmdList.CDRLOGGER(msg)
 
         for x, v in pairs(spells) do
             local name, _, icon = GetSpellInfo(v)
-            print("|T"..icon..":0|t " .. name .. " (" .. v .. ")")
+            local spell = {
+                id = v,
+                name = name,
+                icon = icon
+            }
+            print(CdrLogger.Functions:GetOutputSpell(spell, true))
         end
     elseif cmd == "clear" then
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = {}
@@ -472,7 +552,48 @@ function SlashCmdList.CDRLOGGER(msg)
         local default = CdrLogger.Functions:GetDefaultSettings()
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = default[CdrLogger.Data.className][CdrLogger.Data.specName].spells
         print("|cFF0000FFCDRL: |rTracked spells for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " reset to defaults.")
+    elseif cmd == "timestamp" then
+        local toggle = CdrLogger.Functions:ParseCmdString(subcmd)
+
+        if toggle == "on" then
+            CdrLogger.Data.settings.core.time.showTimestamps = true
+            print("|cFF0000FFCDRL: |rTimestamps |r|cFF00FF00enabled|r.")
+        elseif toggle == "off" then
+            CdrLogger.Data.settings.core.time.showTimestamps = false
+            print("|cFF0000FFCDRL: |rTimestamps |r|cFFFF0000disabled|r.")
+        else
+            print("|cFF0000FFCDRL: Usage: /cdrl timestamp {on/off}")
+        end
+    elseif cmd == "preciseTimestamp" then
+        local toggle = CdrLogger.Functions:ParseCmdString(subcmd)
+
+        if toggle == "on" then
+            CdrLogger.Data.settings.core.time.usePreciseTimestamps = true
+            print("|cFF0000FFCDRL: |rPrecise timestamps |r|cFF00FF00enabled|r.")
+        elseif toggle == "off" then
+            CdrLogger.Data.settings.core.time.usePreciseTimestamps = false
+            print("|cFF0000FFCDRL: |rPrecise timestamps |r|cFFFF0000disabled|r.")
+        else
+            print("|cFF0000FFCDRL: Usage: /cdrl preciseTimestamp {on/off}")
+        end
+    elseif cmd == "timestampPrecision" then
+        local precision = CdrLogger.Functions:ParseCmdString(subcmd)
+
+        precision = tonumber(precision)
+
+        if precision ~= nil then
+            precision = CdrLogger.Functions:RoundTo(precision, 0, floor)
+
+            if precision > 3 or precision < 0 then
+                precision = 3
+            end
+
+            CdrLogger.Data.settings.core.time.precision = precision
+            print("|cFF0000FFCDRL: |rTime precision set to |r|cFF00FF00" .. precision .. "|r decimals.")
+        else
+            print("|cFF0000FFCDRL: Usage: /cdrl timestampPrecision {0-3}")
+        end
     else
-        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add, remove, clear, reset, list")
+        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {id}, remove {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
     end
 end
