@@ -149,7 +149,9 @@ function CdrLogger.Functions:GetDefaultSettings()
             GUARDIAN = {
                 spells = {}
             },
-            RESTORATION = {}
+            RESTORATION = {
+                spells = {}
+            }
         },
         HUNTER = {
             BEASTMASTERY = {
@@ -158,7 +160,9 @@ function CdrLogger.Functions:GetDefaultSettings()
             MARKSMANSHIP = {
                 spells = {}
             },
-            SURVIVAL = {}
+            SURVIVAL = {
+                spells = {}
+            }
         },
         MAGE = {
             ARCANE = {
@@ -167,7 +171,9 @@ function CdrLogger.Functions:GetDefaultSettings()
             FIRE = {
                 spells = {}
             },
-            FROST = {}
+            FROST = {
+                spells = {}
+            }
         },
         MONK = {
             BREWMASTER = {
@@ -176,7 +182,9 @@ function CdrLogger.Functions:GetDefaultSettings()
             MISTWEAVER = {
                 spells = {}
             },
-            WINDWALKER = {}
+            WINDWALKER = {
+                spells = {}
+            }
         },
         PALADIN = {
             HOLY = {
@@ -185,7 +193,9 @@ function CdrLogger.Functions:GetDefaultSettings()
             PROTECTION = {
                 spells = {}
             },
-            RETRIBUTION = {}
+            RETRIBUTION = {
+                spells = {}
+            }
         },
         PRIEST = {
             DISCIPLINE = {
@@ -211,7 +221,9 @@ function CdrLogger.Functions:GetDefaultSettings()
             OUTLAW = {
                 spells = {}
             },
-            SUBTLETY = {}
+            SUBTLETY = {
+                spells = {}
+            }
         },
         SHAMAN = {
             ELEMENTAL = {
@@ -231,7 +243,9 @@ function CdrLogger.Functions:GetDefaultSettings()
             DEMONOLOGY = {
                 spells = {}
             },
-            DESTRUCTION = {}
+            DESTRUCTION = {
+                spells = {}
+            }
         },
         WARRIOR = {
             ARMS = {
@@ -240,7 +254,9 @@ function CdrLogger.Functions:GetDefaultSettings()
             FURY = {
                 spells = {}
             },
-            PROTECTION = {}
+            PROTECTION = {
+                spells = {}
+            }
         }
     }
     return defaultSettings
