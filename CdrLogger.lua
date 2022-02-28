@@ -1,5 +1,8 @@
 local _, CdrLogger = ...
-local trackedSpells = {}
+local tracked = {
+    items = {},
+    spells = {}
+}
 local updateInterval = 0.01
 
 CdrLogger = CdrLogger or {}
@@ -39,32 +42,39 @@ end
 local function CooldownChanged(snapshot)
     local x = snapshot.id
     if snapshot.latestRemainingTime < 0 then
-        print(snapshot.latestRemainingTime, snapshot.previousRemainingTime)
         snapshot.latestRemainingTime = snapshot.previousRemainingTime
     end
 
-    print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. CdrLogger.Functions:GetOutputSpell(trackedSpells[x]) .. " -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
+    local outputLink = ""
+    if snapshot.cooldownType == "spells" then
+        outputLink = CdrLogger.Functions:GetOutputSpell(tracked.spells[x])
+    elseif snapshot.cooldownType == "items" then
+        outputLink = CdrLogger.Functions:GetOutputItem(tracked.items[x])
+    end
+
+    print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
 end
 
-local function CooldownFinished(x, currentTime, outputTime)
+local function CooldownFinished(x, cooldownType, currentTime, outputTime)
     currentTime = currentTime or GetTime()
-    
-    local actualDuration = currentTime - trackedSpells[x].startTime
-    local originalDuration = trackedSpells[x].originalDuration
-    local durationDelta = currentTime - trackedSpells[x].originalEndTime
-    local updateDurationDelta = currentTime - trackedSpells[x].latestEndTime
-    
-    local previousRemainingTime = trackedSpells[x].latestEndTime - currentTime
 
-    trackedSpells[x].lastUpdatedTime = currentTime
-    trackedSpells[x].latestDuration = 0
-    trackedSpells[x].latestEndTime = currentTime
+    local actualDuration = currentTime - tracked[cooldownType][x].startTime
+    local originalDuration = tracked[cooldownType][x].originalDuration
+    local durationDelta = currentTime - tracked[cooldownType][x].originalEndTime
+    local updateDurationDelta = currentTime - tracked[cooldownType][x].latestEndTime
+    
+    local previousRemainingTime = tracked[cooldownType][x].latestEndTime - currentTime
 
-    local originalRemainingTime = trackedSpells[x].originalEndTime - currentTime
-    local latestRemainingTime = trackedSpells[x].latestEndTime - currentTime
+    tracked[cooldownType][x].lastUpdatedTime = currentTime
+    tracked[cooldownType][x].latestDuration = 0
+    tracked[cooldownType][x].latestEndTime = currentTime
+
+    local originalRemainingTime = tracked[cooldownType][x].originalEndTime - currentTime
+    local latestRemainingTime = tracked[cooldownType][x].latestEndTime - currentTime
 
     local snapshot = {
         id = x,
+        cooldownType = cooldownType,
         currentTime = currentTime,
         outputTime = outputTime,
         previousRemainingTime = previousRemainingTime,
@@ -73,9 +83,53 @@ local function CooldownFinished(x, currentTime, outputTime)
     }
 
     CooldownChanged(snapshot)
+
+    local outputLink = ""
+    if snapshot.cooldownType == "spells" then
+        outputLink = CdrLogger.Functions:GetOutputSpell(tracked.spells[x])
+    elseif snapshot.cooldownType == "items" then
+        outputLink = CdrLogger.Functions:GetOutputItem(tracked.items[x])
+    end
     
-    print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. CdrLogger.Functions:GetOutputSpell(trackedSpells[x]) .. " -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
-    trackedSpells[x] = nil
+    print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
+    tracked[cooldownType][x] = nil
+end
+
+local function CooldownLogic(x, cooldownType, startTime, duration, currentTime, osTimestamp)
+    if startTime == 0 then
+        CooldownFinished(x, cooldownType)
+    else
+        local gcdLockRemaining = CdrLogger.Functions:GetCurrentGCDLockRemaining()
+        local previousRemainingTime = tracked[cooldownType][x].latestEndTime - currentTime
+
+        tracked[cooldownType][x].lastUpdatedTime = currentTime
+        tracked[cooldownType][x].latestDuration = duration
+        tracked[cooldownType][x].latestEndTime = duration + startTime
+
+        local originalRemainingTime = tracked[cooldownType][x].originalEndTime - currentTime
+        local latestRemainingTime = tracked[cooldownType][x].latestEndTime - currentTime
+
+        local outputTime = currentTime
+        if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
+            outputTime = osTimestamp
+        end
+        
+        if gcdLockRemaining == latestRemainingTime then
+            CooldownFinished(x, cooldownType, currentTime, outputTime)
+        elseif previousRemainingTime ~= latestRemainingTime then
+            local snapshot = {
+                id = x,
+                cooldownType = cooldownType,
+                currentTime = currentTime,
+                outputTime = outputTime,
+                previousRemainingTime = previousRemainingTime,
+                originalRemainingTime = originalRemainingTime,
+                latestRemainingTime = latestRemainingTime
+            }
+
+            CooldownChanged(snapshot)
+        end
+    end
 end
 
 function timerFrame:onUpdate(sinceLastUpdate)
@@ -83,44 +137,46 @@ function timerFrame:onUpdate(sinceLastUpdate)
     local osTimestamp = date()
     self.sinceLastUpdate = self.sinceLastUpdate + sinceLastUpdate
     if self.sinceLastUpdate >= updateInterval then -- in seconds
-        for x, v in pairs(trackedSpells) do
+        for x, v in pairs(tracked.spells) do
 ---@diagnostic disable-next-line: redundant-parameter
-            local startTime, duration, _, _ = GetSpellCooldown(trackedSpells[x].id)
+            local startTime, duration, _, _ = GetSpellCooldown(tracked.spells[x].id)
 
-            if startTime == 0 then
-                CooldownFinished(x)
-            else
-                local gcdLockRemaining = CdrLogger.Functions:GetCurrentGCDLockRemaining()
-                local previousRemainingTime = trackedSpells[x].latestEndTime - currentTime
+            CooldownLogic(x, "spells", startTime, duration, currentTime, osTimestamp)
+        end
+        
+        local items = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items
 
-                trackedSpells[x].lastUpdatedTime = currentTime
-                trackedSpells[x].latestDuration = duration
-                trackedSpells[x].latestEndTime = duration + startTime
+        for x, v in pairs(items) do
+            local startTime, duration, _ = GetItemCooldown(v)
 
-                local originalRemainingTime = trackedSpells[x].originalEndTime - currentTime
-                local latestRemainingTime = trackedSpells[x].latestEndTime - currentTime
-
+            if  tracked.items[v] == nil and startTime ~= nil and startTime > 0 then
+                local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(v)
+                tracked.items[v] = {
+                    id = v,
+                    name = name,
+                    icon = icon,
+                    startTime = startTime,
+                    originalDuration = duration,
+                    originalEndTime = startTime + duration,
+                    latestDuration = duration,
+                    latestEndTime = duration + startTime,
+                    lastUpdatedTime = currentTime
+                }
                 local outputTime = currentTime
                 if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
                     outputTime = osTimestamp
                 end
-                
-                if gcdLockRemaining == latestRemainingTime then
-                    CooldownFinished(x, currentTime, outputTime)
-                elseif previousRemainingTime ~= latestRemainingTime then
-                    local snapshot = {
-                        id = x,
-                        currentTime = currentTime,
-                        outputTime = outputTime,
-                        previousRemainingTime = previousRemainingTime,
-                        originalRemainingTime = originalRemainingTime,
-                        latestRemainingTime = latestRemainingTime
-                    }
-
-                    CooldownChanged(snapshot)
-                end
+                print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. CdrLogger.Functions:GetOutputItem(tracked.items[v]) .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor))
             end
         end
+
+        for x, v in pairs(tracked.items) do
+---@diagnostic disable-next-line: redundant-parameter
+            local startTime, duration, _ = GetItemCooldown(tracked.items[x].id)
+
+            CooldownLogic(x, "items", startTime, duration, currentTime, osTimestamp)
+        end
+
         self.sinceLastUpdate = 0
     end
 end
@@ -142,7 +198,7 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
 ---@diagnostic disable-next-line: redundant-parameter
                             local startTime, duration, _, _ = GetSpellCooldown(spellId)
                             local name, _, icon = GetSpellInfo(spellId)
-                            trackedSpells[spellId] = {
+                            tracked.spells[spellId] = {
                                 id = spellId,
                                 name = name,
                                 icon = icon,
@@ -157,7 +213,7 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
                             if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
                                 outputTime = osTimestamp
                             end
-                            print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. CdrLogger.Functions:GetOutputSpell(trackedSpells[spellId]) .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor))
+                            print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. CdrLogger.Functions:GetOutputSpell(tracked.spells[spellId]) .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor))
                         end)
                     end
                 end

@@ -125,6 +125,7 @@ function CdrLogger.Functions:GetCurrentGCDTime(floor)
 
 	return gcd
 end
+
 function CdrLogger.Functions:GetLatency()
 	--local down, up, lagHome, lagWorld = GetNetStats()
 	local _, _, _, lagWorld = GetNetStats()
@@ -170,6 +171,17 @@ function CdrLogger.Functions:GetOutputSpell(trackedSpell, includeId)
     return ""
 end
 
+function CdrLogger.Functions:GetOutputItem(trackedItem, includeId)
+    if trackedItem ~= nil then
+        local id = ""
+        if includeId then
+            id = " (" .. trackedItem.id .. ")"
+        end
+        return "|Hitem:" .. trackedItem.id .. "|h[|T" .. trackedItem.icon .. ":0|t " .. trackedItem.name .. "]|h" .. id
+    end
+    return ""
+end
+
 function CdrLogger.Functions:GetDefaultSettings()
     local defaultSettings = {
         core = {
@@ -187,86 +199,119 @@ function CdrLogger.Functions:GetDefaultSettings()
         },
         DEATHKNIGHT = {
             BLOOD = {
+                items = {},
                 spells = {}
             },
             FROST = {
+                items = {},
                 spells = {}
             },
             UNHOLY = {
+                items = {},
                 spells = {}
             },
         },
         DEMONHUNTER = {
             HAVOC = {
+                items = {},
                 spells = {}
             },
             VENGENCE = {
+                items = {},
                 spells = {}
             },
         },
         DRUID = {
             BALANCE = {
+                items = {},
                 spells = {}
             },
             FERAL = {
+                items = {},
                 spells = {}
             },
             GUARDIAN = {
+                items = {},
                 spells = {}
             },
             RESTORATION = {
+                items = {
+                    "188262"
+                },
                 spells = {}
             }
         },
         HUNTER = {
             BEASTMASTERY = {
+                items = {},
                 spells = {}
             },
             MARKSMANSHIP = {
+                items = {},
                 spells = {}
             },
             SURVIVAL = {
+                items = {},
                 spells = {}
             }
         },
         MAGE = {
             ARCANE = {
+                items = {},
                 spells = {}
             },
             FIRE = {
+                items = {},
                 spells = {}
             },
             FROST = {
+                items = {},
                 spells = {}
             }
         },
         MONK = {
             BREWMASTER = {
+                items = {},
                 spells = {}
             },
             MISTWEAVER = {
+                items = {
+                    "188262"
+                },
                 spells = {}
             },
             WINDWALKER = {
+                items = {},
                 spells = {}
             }
         },
         PALADIN = {
             HOLY = {
+                items = {
+                    "188262"
+                },
                 spells = {}
             },
             PROTECTION = {
+                items = {},
                 spells = {}
             },
             RETRIBUTION = {
+                items = {},
                 spells = {}
             }
         },
         PRIEST = {
             DISCIPLINE = {
+                items = {
+                    "188262"
+                },
                 spells = {}
             },
             HOLY = {
+                items = {
+                    "188262"
+                },
                 spells = {
                     "2050",
                     "34861",
@@ -277,50 +322,65 @@ function CdrLogger.Functions:GetDefaultSettings()
                 }
             },
             SHADOW = {
+                items = {},
                 spells = {}
             }
         },
         ROGUE = {
             ASSASSINATION = {
+                items = {},
                 spells = {}
             },
             OUTLAW = {
+                items = {},
                 spells = {}
             },
             SUBTLETY = {
+                items = {},
                 spells = {}
             }
         },
         SHAMAN = {
             ELEMENTAL = {
+                items = {},
                 spells = {}
             },
             ENHANCEMENT = {
+                items = {},
                 spells = {}
             },
             RESTORATION = {
+                items = {
+                    "188262"
+                },
                 spells = {}
             }
         },
         WARLOCK = {
             AFFLICTION = {
+                items = {},
                 spells = {}
             },
             DEMONOLOGY = {
+                items = {},
                 spells = {}
             },
             DESTRUCTION = {
+                items = {},
                 spells = {}
             }
         },
         WARRIOR = {
             ARMS = {
+                items = {},
                 spells = {}
             },
             FURY = {
+                items = {},
                 spells = {}
             },
             PROTECTION = {
+                items = {},
                 spells = {}
             }
         }
@@ -351,28 +411,28 @@ function CdrLogger.Functions:MergeSettings(settings, user)
     return settings
 end
 
-function CdrLogger.Functions:AddTrackedSpell(className, specName, spellId)
+function CdrLogger.Functions:AddTrackedId(className, specName, id, cooldownType)
     local exists = false
-    local t = CdrLogger.Data.settings[className][specName].spells
+    local t = CdrLogger.Data.settings[className][specName][cooldownType]
     for x = 1, #t do
-        if t[x] == spellId then
+        if t[x] == id then
             exists = true
             break
         end
     end
 
     if not exists then
-        table.insert(CdrLogger.Data.settings[className][specName].spells, spellId)
+        table.insert(CdrLogger.Data.settings[className][specName][cooldownType], id)
         return true
     end
     return false
 end
 
-function CdrLogger.Functions:RemoveTrackedSpell(className, specName, spellId)
-    local t = CdrLogger.Data.settings[className][specName].spells
+function CdrLogger.Functions:RemoveTrackedId(className, specName, id, cooldownType)
+    local t = CdrLogger.Data.settings[className][specName][cooldownType]
     for x = 1, #t do
-        if t[x] == spellId then
-            table.remove(CdrLogger.Data.settings[className][specName].spells, x)
+        if t[x] == id then
+            table.remove(CdrLogger.Data.settings[className][specName][cooldownType], x)
             return true
         end
     end
@@ -497,34 +557,77 @@ end
 function SlashCmdList.CDRLOGGER(msg)
     local cmd, subcmd = CdrLogger.Functions:ParseCmdString(msg);
     if cmd == "add" then
-        local spellId = CdrLogger.Functions:ParseCmdString(subcmd)
-        local result = CdrLogger.Functions:AddTrackedSpell(CdrLogger.Data.className, CdrLogger.Data.specName, spellId)
-        local name, _, icon = GetSpellInfo(spellId)
-        local spell = {
-            id = spellId,
-            name = name,
-            icon = icon
-        }
+        local type, id = CdrLogger.Functions:ParseCmdString(subcmd)
+        local outputLink = ""
+        local typeName = ""
+
+        if type == "spell" or type == "spells" then
+            typeName = "spell"
+            type = "spells"
+            local name, _, icon = GetSpellInfo(id)
+            local spell = {
+                id = id,
+                name = name,
+                icon = icon
+            }
+            outputLink = CdrLogger.Functions:GetOutputSpell(spell, true)
+        elseif type == "item" or type == "items" then
+            typeName = "item"
+            type =  "items"
+            local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(id)
+            local item = {
+                id = id,
+                name = name,
+                icon = icon
+            }
+            outputLink = CdrLogger.Functions:GetOutputItem(item, true)
+        else
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add '" .. type .. "' to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". Supported types are 'spell' and 'item'.")
+            return
+        end
+
+        local result = CdrLogger.Functions:AddTrackedId(CdrLogger.Data.className, CdrLogger.Data.specName, id, type)
 
         if result then
-            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in adding spell " .. CdrLogger.Functions:GetOutputSpell(spell, true) .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in adding " .. typeName .. " " .. outputLink .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add spell " .. CdrLogger.Functions:GetOutputSpell(spell, true) .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add " .. typeName .. " " .. outputLink .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         end
     elseif cmd == "remove" then
-        local spellId = CdrLogger.Functions:ParseCmdString(subcmd)
-        local result = CdrLogger.Functions:RemoveTrackedSpell(CdrLogger.Data.className, CdrLogger.Data.specName, spellId)
-        local name, _, icon = GetSpellInfo(spellId)
-        local spell = {
-            id = spellId,
-            name = name,
-            icon = icon
-        }
+        local type, id = CdrLogger.Functions:ParseCmdString(subcmd)
+        local outputLink = ""
+        local typeName = ""
 
-        if result then
-            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in removing spell " .. CdrLogger.Functions:GetOutputSpell(spell, true) .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+        if type == "spell" or type == "spells" then
+            typeName = "spell"
+            type = "spells"
+            local name, _, icon = GetSpellInfo(id)
+            local spell = {
+                id = id,
+                name = name,
+                icon = icon
+            }
+            outputLink = CdrLogger.Functions:GetOutputSpell(spell, true)
+        elseif type == "item" or type == "items" then
+            typeName = "item"
+            type =  "items"
+            local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(id)
+            local item = {
+                id = id,
+                name = name,
+                icon = icon
+            }
+            outputLink = CdrLogger.Functions:GetOutputItem(item, true)
         else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove spell " .. CdrLogger.Functions:GetOutputSpell(spell, true) .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove '" .. type .. "' from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". Supported types are 'spell' and 'item'.")
+            return
+        end
+
+        local result = CdrLogger.Functions:RemoveTrackedId(CdrLogger.Data.className, CdrLogger.Data.specName, id, type)
+        if result then
+            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in removing " .. typeName .. " " .. outputLink .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+        else
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove " .. typeName .. " " .. outputLink .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         end
     elseif cmd == "start" or cmd == "on" then
         CdrLogger.Data.enabled = true
@@ -536,7 +639,9 @@ function SlashCmdList.CDRLOGGER(msg)
         print("|cFF0000FFCDRL: |rTracked spells for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className)
         local spells = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells
 
+        local found = false
         for x, v in pairs(spells) do
+            found = true
             local name, _, icon = GetSpellInfo(v)
             local spell = {
                 id = v,
@@ -545,13 +650,35 @@ function SlashCmdList.CDRLOGGER(msg)
             }
             print(CdrLogger.Functions:GetOutputSpell(spell, true))
         end
+        if found == false then
+            print("No spells tracked.")
+        end
+
+        print("|cFF0000FFCDRL: |rTracked items for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className)
+        local items = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items
+        found = false
+        for x, v in pairs(items) do
+            found = true
+            local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(v)
+            local item = {
+                id = v,
+                name = name,
+                icon = icon
+            }
+            print(CdrLogger.Functions:GetOutputItem(item, true))
+        end
+        if found == false then
+            print("No items tracked.")
+        end
     elseif cmd == "clear" then
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = {}
-        print("|cFF0000FFCDRL: |rTracked spells for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " cleared.")
+        CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items = {}
+        print("|cFF0000FFCDRL: |rTracked spells and items for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " cleared.")
     elseif cmd == "reset" then
         local default = CdrLogger.Functions:GetDefaultSettings()
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = default[CdrLogger.Data.className][CdrLogger.Data.specName].spells
-        print("|cFF0000FFCDRL: |rTracked spells for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " reset to defaults.")
+        CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items = default[CdrLogger.Data.className][CdrLogger.Data.specName].items
+        print("|cFF0000FFCDRL: |rTracked spells and items for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " reset to defaults.")
     elseif cmd == "timestamp" then
         local toggle = CdrLogger.Functions:ParseCmdString(subcmd)
 
@@ -594,6 +721,6 @@ function SlashCmdList.CDRLOGGER(msg)
             print("|cFF0000FFCDRL: Usage: /cdrl timestampPrecision {0-3}")
         end
     else
-        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {id}, remove {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
+        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {spell|item} {id}, remove  {spell|item} {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
     end
 end
