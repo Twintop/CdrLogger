@@ -3,12 +3,12 @@ A World of Warcraft addon to help with tracking/debugging Cooldown Reduction int
 
 Slash commands:
 
-* /cdlr - Help text.
-* /cdlr on - Starts logging of spells.
-* /cdlr off - Stops logging of spells.
-* /cdlr add {spell|item} {id} - Adds a spell or item by ID to be tracked. This should be a spell your current class and spec can cast or an item you can use!
-* /cdlr remove {spell|item} {id} - Removes a spell or item by ID that is currently being tracked.
-* /cdlr list - Lists all spells your current class and spec is tracking.
+* /cdrl - Help text.
+* /cdrl on - Starts logging of spells.
+* /cdrl off - Stops logging of spells.
+* /cdrl add {spell|item} {id} - Adds a spell or item by ID to be tracked. This should be a spell your current class and spec can cast or an item you can use!
+* /cdrl remove {spell|item} {id} - Removes a spell or item by ID that is currently being tracked.
+* /cdrl list - Lists all spells your current class and spec is tracking.
 * /cdrl clear - Removes all spells and items from being tracked by your current class and spec.
 * /cdrl reset - Overwrites the list of currently tracked spells and items for your current class and spec to the defaults.
 * /cdrl timestamp {on/off} - Enables/disables timestamps from output.
