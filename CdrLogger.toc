@@ -2,9 +2,9 @@
 ## Title: Cooldown Reduction Logger
 ## Author: Twintop
 ## X-AuthorServer: Frostmourne-US/OCE
-## Version: 9.2.0.1
+## Version: 9.2.0.2
 ## X-ReleaseType: release
-## X-ReleaseDate: March 01, 2022
+## X-ReleaseDate: March 07, 2022
 ## SavedVariables: CdrLoggerSettings
 ## DefaultState: enabled
 ## Notes: Logs events for spells or items that are affected by cooldown reduction effects.

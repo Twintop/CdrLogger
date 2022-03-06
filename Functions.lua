@@ -228,7 +228,10 @@ function CdrLogger.Functions:GetDefaultSettings()
             },
             FERAL = {
                 items = {},
-                spells = {}
+                spells = {
+                    "106951", -- Berserk
+                    "102543", -- Incarnation: King of the Jungle
+                }
             },
             GUARDIAN = {
                 items = {},
@@ -236,7 +239,7 @@ function CdrLogger.Functions:GetDefaultSettings()
             },
             RESTORATION = {
                 items = {
-                    "188262"
+                    "188262" -- The Lion's Roar
                 },
                 spells = {}
             }
@@ -276,7 +279,7 @@ function CdrLogger.Functions:GetDefaultSettings()
             },
             MISTWEAVER = {
                 items = {
-                    "188262"
+                    "188262" -- The Lion's Roar
                 },
                 spells = {}
             },
@@ -288,7 +291,7 @@ function CdrLogger.Functions:GetDefaultSettings()
         PALADIN = {
             HOLY = {
                 items = {
-                    "188262"
+                    "188262" -- The Lion's Roar
                 },
                 spells = {}
             },
@@ -304,26 +307,33 @@ function CdrLogger.Functions:GetDefaultSettings()
         PRIEST = {
             DISCIPLINE = {
                 items = {
-                    "188262"
+                    "188262" -- The Lion's Roar
                 },
-                spells = {}
+                spells = {
+                    "19236", -- Desperate Prayer
+                    "325013" -- Boon of the Ascended
+                }
             },
             HOLY = {
                 items = {
-                    "188262"
+                    "188262" -- The Lion's Roar
                 },
                 spells = {
-                    "2050",
-                    "34861",
-                    "88625",
-                    "265202",
-                    "64843",
-                    "19236"
+                    "2050", -- Holy Word: Serenity
+                    "34861", -- Holy Word: Sanctify
+                    "88625", -- Holy Word: Chastise
+                    "265202", -- Holy Word: Salvation
+                    "64843", -- Divine Hymn
+                    "19236", -- Desperate Prayer
+                    "325013" -- Boon of the Ascended
                 }
             },
             SHADOW = {
                 items = {},
-                spells = {}
+                spells = {
+                    "19236", -- Desperate Prayer
+                    "325013" -- Boon of the Ascended
+                }
             }
         },
         ROGUE = {
@@ -351,9 +361,14 @@ function CdrLogger.Functions:GetDefaultSettings()
             },
             RESTORATION = {
                 items = {
-                    "188262"
+                    "188262" -- The Lion's Roar
                 },
-                spells = {}
+                spells = {
+                    "5394", -- Healing Stream Totem
+                    "108280", -- Healing Tide Totem
+                    "16191", -- Mana Tide Totem
+                    "98008" -- Spirit Link Totem
+                }
             }
         },
         WARLOCK = {
