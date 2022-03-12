@@ -285,7 +285,10 @@ function CdrLogger.Functions:GetDefaultSettings()
             },
             WINDWALKER = {
                 items = {},
-                spells = {}
+                spells = {
+                    "107428",
+                    "113656"
+                }
             }
         },
         PALADIN = {
