@@ -286,8 +286,8 @@ function CdrLogger.Functions:GetDefaultSettings()
             WINDWALKER = {
                 items = {},
                 spells = {
-                    "107428",
-                    "113656"
+                    "107428", -- Rising Sun Kick
+                    "113656" -- Fists of Fury
                 }
             }
         },
