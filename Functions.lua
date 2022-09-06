@@ -320,32 +320,48 @@ function CdrLogger.Functions:GetDefaultSettings()
         PRIEST = {
             DISCIPLINE = {
                 items = {
+                    -- Shadowlands
                     "188262" -- The Lion's Roar
                 },
                 spells = {
+                    -- Class Abilities
                     "19236", -- Desperate Prayer
+                    "373481", -- Holy Word: Life
+                    -- Specialization Abilities
+                    "47540", -- Pennance
+                    -- Shadowlands
                     "325013" -- Boon of the Ascended
                 }
             },
             HOLY = {
                 items = {
+                    -- Shadowlands
                     "188262" -- The Lion's Roar
                 },
                 spells = {
+                    -- Class Abilities
+                    "19236", -- Desperate Prayer
+                    "373481", -- Holy Word: Life
+                    -- Specialization Abilities
                     "2050", -- Holy Word: Serenity
                     "34861", -- Holy Word: Sanctify
                     "88625", -- Holy Word: Chastise
                     "265202", -- Holy Word: Salvation
                     "64843", -- Divine Hymn
-                    "19236", -- Desperate Prayer
+                    "47788", -- Guardian Spirit
+                    -- Shadowlands
                     "325013" -- Boon of the Ascended
                 }
             },
             SHADOW = {
                 items = {},
                 spells = {
+                    -- Class Abilities
                     "19236", -- Desperate Prayer
-                    "325013" -- Boon of the Ascended
+                    -- Specialization Abilities
+                    "34433", -- Mindbender
+                    -- Shadowlands
+                    "325013", -- Boon of the Ascended
                 }
             }
         },
