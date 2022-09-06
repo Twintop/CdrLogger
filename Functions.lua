@@ -358,6 +358,7 @@ function CdrLogger.Functions:GetDefaultSettings()
                 spells = {
                     -- Class Abilities
                     "19236", -- Desperate Prayer
+                    "132603", -- Shadowfiend
                     -- Specialization Abilities
                     "34433", -- Mindbender
                     -- Shadowlands
