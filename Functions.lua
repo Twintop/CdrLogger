@@ -244,6 +244,16 @@ function CdrLogger.Functions:GetDefaultSettings()
                 spells = {}
             }
         },
+        EVOKER = {
+            DEVASTATION = {
+                items = {},
+                spells = {}
+            },
+            PRESERVATION = {
+                items = {},
+                spells = {}
+            }
+        },
         HUNTER = {
             BEASTMASTERY = {
                 items = {},
