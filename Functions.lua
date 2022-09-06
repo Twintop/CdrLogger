@@ -517,6 +517,12 @@ function CdrLogger.Functions:LookupSpecializationName(className, specId)
         elseif specId == 3 then
             return "SURVIVAL"
         end
+    elseif className == "EVOKER" then
+        if specId == 1 then
+            return "DEVASTATION"
+        elseif specId == 2 then
+            return "PRESERVATION"
+        end
     elseif className == "MAGE" then
         if specId == 1 then
             return "ARCANE"
