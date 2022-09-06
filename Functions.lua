@@ -738,6 +738,45 @@ function SlashCmdList.CDRLOGGER(msg)
         else
             print("|cFF0000FFCDRL: Usage: /cdrl timestampPrecision {0-3}")
         end
+    elseif cmd == "df" then
+        local _, name, icon, iconString
+        local configId = C_ClassTalents.GetActiveConfigID()
+        local configInfo = C_Traits.GetConfigInfo(configId)
+        for _, treeId in pairs(configInfo.treeIDs) do
+            local nodes = C_Traits.GetTreeNodes(treeId)
+            for _, nodeId in pairs(nodes) do
+                local node = C_Traits.GetNodeInfo(configId, nodeId)
+                local entryId = nil
+                
+                if node.activeEntry ~= nil then
+                    entryId = node.activeEntry.entryID
+                elseif node.nextEntry ~= nil then
+                    entryId = node.nextEntry.entryID
+                elseif node.entryIDs ~= nil then
+                    entryId = node.entryIDs[1]
+                end
+
+                if entryId ~= nil then
+                --if node.ranksPurchased > 0 then        
+                    --print(node.activeEntry, "|", node.nextEntry, "|", node.entryIDs[1], configId, treeId, nodeId)
+                    local entryInfo = C_Traits.GetEntryInfo(configId, entryId)
+                    local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
+
+                    name, _, icon = GetSpellInfo(definitionInfo.spellID)
+                    iconString = string.format("|T%s:0|t", icon)
+
+                    local color = "FF00FF00"
+
+                    if node.ranksPurchased == 0 then
+                        color = "FFFF0000"
+                    end
+
+                    print(iconString .. " " .. name .. " (|c" .. color .. definitionInfo.spellID .. "|r) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.ranksPurchased .. "/" .. node.maxRanks)
+                --else
+                    --print(configId, treeId, nodeId, node.)
+                end
+            end
+        end
     else
         print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {spell|item} {id}, remove  {spell|item} {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
     end
