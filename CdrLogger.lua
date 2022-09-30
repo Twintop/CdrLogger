@@ -164,6 +164,7 @@ function timerFrame:onUpdate(sinceLastUpdate)
                 }
                 local outputTime = currentTime
                 if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
+---@diagnostic disable-next-line: cast-local-type
                     outputTime = osTimestamp
                 end
                 print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. CdrLogger.Functions:GetOutputItem(tracked.items[v]) .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor))
@@ -195,9 +196,11 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
                 if spellId == tonumber(v) then
                     if type == "SPELL_CAST_SUCCESS" then
                         C_Timer.After(updateInterval, function()
----@diagnostic disable-next-line: redundant-parameter
+---@diagnostic disable-next-line: param-type-mismatch
                             local startTime, duration, _, _ = GetSpellCooldown(spellId)
+---@diagnostic disable-next-line: param-type-mismatch
                             local name, _, icon = GetSpellInfo(spellId)
+---@diagnostic disable-next-line: param-type-mismatch, need-check-nil
                             tracked.spells[spellId] = {
                                 id = spellId,
                                 name = name,
@@ -211,6 +214,7 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
                             }
                             local outputTime = currentTime
                             if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
+---@diagnostic disable-next-line: cast-local-type
                                 outputTime = osTimestamp
                             end
                             print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. CdrLogger.Functions:GetOutputSpell(tracked.spells[spellId]) .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor))

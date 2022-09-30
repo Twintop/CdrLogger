@@ -795,18 +795,29 @@ function SlashCmdList.CDRLOGGER(msg)
                     local entryInfo = C_Traits.GetEntryInfo(configId, entryId)
                     local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
 
-                    name, _, icon = GetSpellInfo(definitionInfo.spellID)
-                    iconString = string.format("|T%s:0|t", icon)
+                    if definitionInfo ~= nil then
+                        local spellId = nil
+                        if definitionInfo.spellID ~= nil then
+                            spellId = definitionInfo.spellID
+                        elseif definitionInfo.overriddenSpellID ~= nil then
+                            spellId = definitionInfo.overriddenSpellID
+                        end
 
-                    local color = "FF00FF00"
+                        if spellId ~= nil then
+                            name, _, icon = GetSpellInfo(spellId)
+                            iconString = string.format("|T%s:0|t", icon)
 
-                    if node.ranksPurchased == 0 then
-                        color = "FFFF0000"
+                            local color = "FF00FF00"
+
+                            if node.ranksPurchased == 0 then
+                                color = "FFFF0000"
+                            end
+                            
+                            print("|Hspell:" .. spellId .. "|h[" .. iconString .. " " .. name .. "]|h (|c" .. color .. spellId .. "|r) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.ranksPurchased .. "/" .. node.maxRanks)
+                        --else
+                            --print(configId, treeId, nodeId, node.)
+                        end
                     end
-
-                    print(iconString .. " " .. name .. " (|c" .. color .. definitionInfo.spellID .. "|r) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.ranksPurchased .. "/" .. node.maxRanks)
-                --else
-                    --print(configId, treeId, nodeId, node.)
                 end
             end
         end
