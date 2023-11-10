@@ -252,6 +252,10 @@ function CdrLogger.Functions:GetDefaultSettings()
             PRESERVATION = {
                 items = {},
                 spells = {}
+            },
+            AUGMENTATION = {
+                items = {},
+                spells = {}
             }
         },
         HUNTER = {
@@ -522,6 +526,8 @@ function CdrLogger.Functions:LookupSpecializationName(className, specId)
             return "DEVASTATION"
         elseif specId == 2 then
             return "PRESERVATION"
+        elseif specId == 3 then
+            return "AUGMENTATION"
         end
     elseif className == "MAGE" then
         if specId == 1 then
