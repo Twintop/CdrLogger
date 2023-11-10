@@ -813,7 +813,7 @@ function SlashCmdList.CDRLOGGER(msg)
                                 color = "FFFF0000"
                             end
                             
-                            print("|Hspell:" .. spellId .. "|h[" .. iconString .. " " .. name .. "]|h (|c" .. color .. spellId .. "|r) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.ranksPurchased .. "/" .. node.maxRanks)
+                            print("|Hspell:" .. spellId .. "|h[" .. iconString .. " " .. name .. "]|h (|c" .. color .. spellId .. "|r [E: "..entryId..", N: "..nodeId.."]) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.ranksPurchased .. "/" .. node.maxRanks)
                         --else
                             --print(configId, treeId, nodeId, node.)
                         end
