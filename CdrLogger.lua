@@ -32,6 +32,7 @@ function CdrLogger:EventRegistration()
     end
 end
 
+--[[
 local function GetOutputTimeIfAny(timeInput)
     if CdrLogger.Data.settings.core.time.showTimestamps then
         return "[" .. CdrLogger.Functions:GetOutputTime(timeInput) .. "] "
@@ -131,6 +132,7 @@ local function CooldownLogic(x, cooldownType, startTime, duration, currentTime, 
         end
     end
 end
+]]
 
 function timerFrame:onUpdate(sinceLastUpdate)
     local currentTime = GetTime()
@@ -138,44 +140,30 @@ function timerFrame:onUpdate(sinceLastUpdate)
     self.sinceLastUpdate = self.sinceLastUpdate + sinceLastUpdate
     if self.sinceLastUpdate >= updateInterval then -- in seconds
         for x, v in pairs(tracked.spells) do
----@diagnostic disable-next-line: redundant-parameter
-            local startTime, duration, _, _ = GetSpellCooldown(tracked.spells[x].id)
-
-            CooldownLogic(x, "spells", startTime, duration, currentTime, osTimestamp)
+            if tracked.spells[x].tracking then
+                tracked.spells[x]:Refresh()
+                tracked.spells[x]:CooldownLogic(currentTime, osTimestamp)
+            end
         end
         
         local items = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items
 
         for x, v in pairs(items) do
-            local startTime, duration, _ = GetItemCooldown(v)
-
-            if  tracked.items[v] == nil and startTime ~= nil and startTime > 0 then
-                local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(v)
-                tracked.items[v] = {
-                    id = v,
-                    name = name,
-                    icon = icon,
-                    startTime = startTime,
-                    originalDuration = duration,
-                    originalEndTime = startTime + duration,
-                    latestDuration = duration,
-                    latestEndTime = duration + startTime,
-                    lastUpdatedTime = currentTime
-                }
-                local outputTime = currentTime
-                if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
----@diagnostic disable-next-line: cast-local-type
-                    outputTime = osTimestamp
-                end
-                print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. CdrLogger.Functions:GetOutputItem(tracked.items[v]) .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor))
+            if tracked.items[v] == nil then
+                ---@diagnostic disable-next-line: need-check-nil
+                tracked.items[v] = CdrLogger.Classes.Cooldown:New(v, "item")
             end
-        end
 
-        for x, v in pairs(tracked.items) do
----@diagnostic disable-next-line: redundant-parameter
-            local startTime, duration, _ = GetItemCooldown(tracked.items[x].id)
+            if tracked.items[v].tracking then
+                tracked.items[v]:Refresh()
+                tracked.items[v]:CooldownLogic(currentTime, osTimestamp)
+            else
+                local startTime, duration, _ = C_Item.GetItemCooldown(v)
 
-            CooldownLogic(x, "items", startTime, duration, currentTime, osTimestamp)
+                if startTime ~= nil and startTime > 0 then
+                    tracked.items[v]:Initialize(currentTime, osTimestamp)
+                end
+            end
         end
 
         self.sinceLastUpdate = 0
@@ -195,30 +183,11 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
             for x, v in pairs(spells) do
                 if spellId == tonumber(v) then
                     if type == "SPELL_CAST_SUCCESS" then
-                        C_Timer.After(updateInterval, function()
----@diagnostic disable-next-line: param-type-mismatch
-                            local startTime, duration, _, _ = GetSpellCooldown(spellId)
----@diagnostic disable-next-line: param-type-mismatch
-                            local name, _, icon = GetSpellInfo(spellId)
----@diagnostic disable-next-line: param-type-mismatch, need-check-nil
-                            tracked.spells[spellId] = {
-                                id = spellId,
-                                name = name,
-                                icon = icon,
-                                startTime = startTime,
-                                originalDuration = duration,
-                                originalEndTime = startTime + duration,
-                                latestDuration = duration,
-                                latestEndTime = duration + startTime,
-                                lastUpdatedTime = currentTime
-                            }
-                            local outputTime = currentTime
-                            if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
----@diagnostic disable-next-line: cast-local-type
-                                outputTime = osTimestamp
-                            end
-                            print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. CdrLogger.Functions:GetOutputSpell(tracked.spells[spellId]) .. " -- " .. CdrLogger.Functions:RoundTo(duration, 3, floor))
-                        end)
+                        if tracked.spells[spellId] == nil then
+---@diagnostic disable-next-line: need-check-nil
+                            tracked.spells[spellId] = CdrLogger.Classes.Cooldown:New(spellId, "spell")
+                        end
+                        tracked.spells[spellId]:Initialize(currentTime, osTimestamp)
                     end
                 end
             end
