@@ -160,28 +160,6 @@ function CdrLogger.Functions:GetOutputTime(timeInput)
     end
 end
 
-function CdrLogger.Functions:GetOutputSpell(trackedSpell, includeId)
-    if trackedSpell ~= nil then
-        local id = ""
-        if includeId then
-            id = " (" .. trackedSpell.id .. ")"
-        end
-        return "|Hspell:" .. trackedSpell.id .. "|h[|T" .. trackedSpell.icon .. ":0|t " .. trackedSpell.name .. "]|h" .. id
-    end
-    return ""
-end
-
-function CdrLogger.Functions:GetOutputItem(trackedItem, includeId)
-    if trackedItem ~= nil then
-        local id = ""
-        if includeId then
-            id = " (" .. trackedItem.id .. ")"
-        end
-        return "|Hitem:" .. trackedItem.id .. "|h[|T" .. trackedItem.icon .. ":0|t " .. trackedItem.name .. "]|h" .. id
-    end
-    return ""
-end
-
 function CdrLogger.Functions:GetDefaultSettings()
     local defaultSettings = {
         core = {
@@ -353,8 +331,10 @@ function CdrLogger.Functions:GetDefaultSettings()
                     "265202", -- Holy Word: Salvation
                     "64843", -- Divine Hymn
                     "47788", -- Guardian Spirit
+                    "372835", -- Lightwell
+                    "33076", -- Prayer of Mending
                     -- Shadowlands
-                    "325013" -- Boon of the Ascended
+                    "325013", -- Boon of the Ascended
                 }
             },
             SHADOW = {
@@ -461,6 +441,11 @@ function CdrLogger.Functions:MergeSettings(settings, user)
 end
 
 function CdrLogger.Functions:AddTrackedId(className, specName, id, cooldownType)
+    if cooldownType == "spell" then
+        cooldownType = "spells"
+    elseif cooldownType == "item" then
+        cooldownType = "items"
+    end
     local exists = false
     local t = CdrLogger.Data.settings[className][specName][cooldownType]
     for x = 1, #t do
@@ -471,13 +456,18 @@ function CdrLogger.Functions:AddTrackedId(className, specName, id, cooldownType)
     end
 
     if not exists then
-        table.insert(CdrLogger.Data.settings[className][specName][cooldownType], id)
+        table.insert(t, id)
         return true
     end
     return false
 end
 
 function CdrLogger.Functions:RemoveTrackedId(className, specName, id, cooldownType)
+    if cooldownType == "spell" then
+        cooldownType = "spells"
+    elseif cooldownType == "item" then
+        cooldownType = "items"
+    end
     local t = CdrLogger.Data.settings[className][specName][cooldownType]
     for x = 1, #t do
         if t[x] == id then
@@ -597,6 +587,25 @@ function CdrLogger.Functions:LookupSpecializationName(className, specId)
     return nil
 end
 
+function CdrLogger.Functions:LoadSpecializationTrackedSpellsItems()
+    local tracked = CdrLogger.Data.tracked
+    local spells = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells
+    for x, v in pairs(spells) do
+        if tracked.spells[v] == nil then
+---@diagnostic disable-next-line: need-check-nil
+            tracked.spells[v] = CdrLogger.Classes.Cooldown:New(v, "spell")
+        end
+    end
+
+    local items = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items
+    for x, v in pairs(items) do
+        if tracked.items[v] == nil then
+---@diagnostic disable-next-line: need-check-nil
+            tracked.items[v] = CdrLogger.Classes.Cooldown:New(v, "item")
+        end
+    end
+end
+
 function CdrLogger.Functions:ParseCmdString(msg)
 	if msg then
 		while (strfind(msg,"  ") ~= nil) do
@@ -619,36 +628,25 @@ function SlashCmdList.CDRLOGGER(msg)
         local typeName = ""
 
         if type == "spell" or type == "spells" then
-            typeName = "spell"
-            type = "spells"
-            local name, _, icon = GetSpellInfo(id)
-            local spell = {
-                id = id,
-                name = name,
-                icon = icon
-            }
-            outputLink = CdrLogger.Functions:GetOutputSpell(spell, true)
+            if CdrLogger.Data.tracked.spells[id] == nil then
+                CdrLogger.Data.tracked.spells[id] = CdrLogger.Classes.Cooldown:New(id, "spell")
+                outputLink = CdrLogger.Data.tracked.spells[id]:GetOutput(true)
+            end
         elseif type == "item" or type == "items" then
-            typeName = "item"
-            type =  "items"
-            local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(id)
-            local item = {
-                id = id,
-                name = name,
-                icon = icon
-            }
-            outputLink = CdrLogger.Functions:GetOutputItem(item, true)
+            if CdrLogger.Data.tracked.items[id] == nil then
+                CdrLogger.Data.tracked.items[id] = CdrLogger.Classes.Cooldown:New(id, "item")
+                outputLink = CdrLogger.Data.tracked.spells[id]:GetOutput(true)
+            end
         else
             print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add '" .. type .. "' to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". Supported types are 'spell' and 'item'.")
             return
         end
 
         local result = CdrLogger.Functions:AddTrackedId(CdrLogger.Data.className, CdrLogger.Data.specName, id, type)
-
         if result then
             print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in adding " .. typeName .. " " .. outputLink .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add " .. typeName .. " " .. outputLink .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add " .. typeName .. " " .. id .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         end
     elseif cmd == "remove" then
         local type, id = CdrLogger.Functions:ParseCmdString(subcmd)
@@ -656,25 +654,15 @@ function SlashCmdList.CDRLOGGER(msg)
         local typeName = ""
 
         if type == "spell" or type == "spells" then
-            typeName = "spell"
-            type = "spells"
-            local name, _, icon = GetSpellInfo(id)
-            local spell = {
-                id = id,
-                name = name,
-                icon = icon
-            }
-            outputLink = CdrLogger.Functions:GetOutputSpell(spell, true)
+            if CdrLogger.Data.tracked.spells[id] ~= nil then
+                outputLink = CdrLogger.Data.tracked.spells[id]:GetOutput(true)
+                CdrLogger.Data.tracked.spells[id] = nil
+            end
         elseif type == "item" or type == "items" then
-            typeName = "item"
-            type =  "items"
-            local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(id)
-            local item = {
-                id = id,
-                name = name,
-                icon = icon
-            }
-            outputLink = CdrLogger.Functions:GetOutputItem(item, true)
+            if CdrLogger.Data.tracked.items[id] ~= nil then
+                outputLink = CdrLogger.Data.tracked.items[id]:GetOutput(true)
+                CdrLogger.Data.tracked.items[id] = nil
+            end
         else
             print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove '" .. type .. "' from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". Supported types are 'spell' and 'item'.")
             return
@@ -693,36 +681,35 @@ function SlashCmdList.CDRLOGGER(msg)
         CdrLogger.Data.enabled = false
         CdrLogger:EventRegistration()
     elseif cmd == "list" then
+        local tracked = CdrLogger.Data.tracked
         print("|cFF0000FFCDRL: |rTracked spells for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className)
         local spells = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells
 
         local found = false
         for x, v in pairs(spells) do
             found = true
-            local name, _, icon = GetSpellInfo(v)
-            local spell = {
-                id = v,
-                name = name,
-                icon = icon
-            }
-            print(CdrLogger.Functions:GetOutputSpell(spell, true))
+            if tracked.spells[v] == nil then
+---@diagnostic disable-next-line: need-check-nil
+                tracked.spells[v] = CdrLogger.Classes.Cooldown:New(v, "spell")
+            end
+            print(tracked.spells[v]:GetOutput())
         end
+        
         if found == false then
             print("No spells tracked.")
         end
 
         print("|cFF0000FFCDRL: |rTracked items for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className)
-        local items = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items
         found = false
+        
+        local items = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items
         for x, v in pairs(items) do
             found = true
-            local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(v)
-            local item = {
-                id = v,
-                name = name,
-                icon = icon
-            }
-            print(CdrLogger.Functions:GetOutputItem(item, true))
+            if tracked.items[v] == nil then
+---@diagnostic disable-next-line: need-check-nil
+                tracked.items[v] = CdrLogger.Classes.Cooldown:New(v, "item")
+            end
+            print(tracked.items[v]:GetOutput())
         end
         if found == false then
             print("No items tracked.")
@@ -730,11 +717,19 @@ function SlashCmdList.CDRLOGGER(msg)
     elseif cmd == "clear" then
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = {}
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items = {}
+        CdrLogger.Data.tracked = {
+            spells = {},
+            items = {}
+        }
         print("|cFF0000FFCDRL: |rTracked spells and items for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " cleared.")
     elseif cmd == "reset" then
         local default = CdrLogger.Functions:GetDefaultSettings()
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = default[CdrLogger.Data.className][CdrLogger.Data.specName].spells
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items = default[CdrLogger.Data.className][CdrLogger.Data.specName].items
+        CdrLogger.Data.tracked = {
+            spells = {},
+            items = {}
+        }
         print("|cFF0000FFCDRL: |rTracked spells and items for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " reset to defaults.")
     elseif cmd == "timestamp" then
         local toggle = CdrLogger.Functions:ParseCmdString(subcmd)

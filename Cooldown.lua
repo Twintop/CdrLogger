@@ -35,6 +35,8 @@ function CdrLogger.Classes.Cooldown:New(id, type)
     setmetatable(self, CdrLogger.Classes.Cooldown)
     self:Reset()
     self.id = id
+    self.name = ""
+    self.icon = ""
     self.type = type
 
     local name, icon
@@ -129,14 +131,20 @@ function CdrLogger.Classes.Cooldown:GetRemainingTime(currentTime, totalTime)
 end
 
 function CdrLogger.Classes.Cooldown:SetOriginalLatest(currentTime)
-    currentTime = currentTime or GetTime()
-    self.originalStartTime = self.startTime
-    self.originalDuration = self.duration
-    self.originalEndTime = self.startTime + self.duration
-    self.latestDuration = self.duration
-    self.latestEndTime = self.duration + self.startTime
-    self.lastUpdatedTime = currentTime
-    self.latestCharges = self.charges
+    if self.startTime == nil then
+        self:Refresh(true)
+    end
+
+    if self.startTime ~= nil then
+        currentTime = currentTime or GetTime()
+        self.originalStartTime = self.startTime
+        self.originalDuration = self.duration
+        self.originalEndTime = self.startTime + self.duration
+        self.latestDuration = self.duration
+        self.latestEndTime = self.duration + self.startTime
+        self.lastUpdatedTime = currentTime
+        self.latestCharges = self.charges
+    end
 end
 
 ---Initializes the cooldown information for the snapshot by forcing a refresh and a retry on the next frame, if needed
@@ -163,6 +171,7 @@ end
 function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
     local startTime = nil
     local duration = 0
+    local currentTime = GetTime()
 
     if force or self.tracking or self.onCooldown or self.charges < self.maxCharges then
         if self.type == "spell" then
@@ -189,11 +198,14 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
             return
         end
 
+        if self.originalStartTime == nil then
+            self.originalStartTime = currentTime
+        end
+
         local gcd = CdrLogger.Functions:GetCurrentGCDLockRemaining()
         local down, up, lagHome, lagWorld = GetNetStats()
         local latency = lagWorld / 1000
         
-        local currentTime = GetTime()
         local remainingTime = startTime + duration - currentTime
 
         if ((startTime ~= nil and startTime > 0 and not self.onCooldown and remainingTime > gcd + latency) or
@@ -249,19 +261,21 @@ function CdrLogger.Classes.Cooldown:CooldownLogic(currentTime, osTimestamp)
             outputTime = osTimestamp
         end
         
+        local snapshot = {
+            currentTime = currentTime,
+            outputTime = outputTime,
+            previousRemainingTime = previousRemainingTime,
+            originalRemainingTime = originalRemainingTime,
+            latestRemainingTime = latestRemainingTime
+        }
+
         if gcdLockRemaining == latestRemainingTime then
             self:CooldownFinished(currentTime, outputTime)
         elseif self.latestCharges > previousCharges then
             self:CooldownFinished(currentTime, outputTime)
+        elseif self.latestCharges < previousCharges then
+            self:CooldownChanged(snapshot, true)
         elseif force or previousRemainingTime ~= latestRemainingTime then
-            local snapshot = {
-                currentTime = currentTime,
-                outputTime = outputTime,
-                previousRemainingTime = previousRemainingTime,
-                originalRemainingTime = originalRemainingTime,
-                latestRemainingTime = latestRemainingTime
-            }
-
             self:CooldownChanged(snapshot)
         end
     end
@@ -300,7 +314,8 @@ function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime)
         if self.maxCharges == self.charges then
             print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
         else
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "CHARGE: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "CHARGE GAIN: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
+
         end
     else
         print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
@@ -314,16 +329,20 @@ function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime)
     end
 end
 
-function CdrLogger.Classes.Cooldown:CooldownChanged(snapshot)
+function CdrLogger.Classes.Cooldown:CooldownChanged(snapshot, fromCharges)
     local x = snapshot.id
-    if snapshot.latestRemainingTime < 0 then
+    if snapshot.latestRemainingTime < 0 and not fromCharges then
         snapshot.latestRemainingTime = snapshot.previousRemainingTime
     end
 
     local outputLink = self:GetOutput()
  
     if self.maxCharges > 1 then
-        print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
+        if fromCharges then
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CHARGE USE: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
+        else
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
+        end
     else
         print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
     end
