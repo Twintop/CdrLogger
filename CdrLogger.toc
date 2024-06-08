@@ -3,7 +3,7 @@
 ## Author: Twintop
 ## X-AuthorServer: Frostmourne-US/OCE
 ## Version: 11.0.0.0
-## X-ReleaseType: alpha
+## X-ReleaseType: alpha01
 ## X-ReleaseDate: June 08, 2024
 ## SavedVariables: CdrLoggerSettings
 ## DefaultState: enabled
