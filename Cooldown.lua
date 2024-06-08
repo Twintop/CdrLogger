@@ -41,9 +41,9 @@ function CdrLogger.Classes.Cooldown:New(id, type)
 
     local name, icon
     if type == "spell" then
-        name, _, icon = GetSpellInfo(self.id)
-        self.name = name
-        self.icon = string.format("|T%s:0|t", icon)
+        local spellInfo = C_Spell.GetSpellInfo(self.id) --[[@as SpellInfo]]
+        self.name = spellInfo.name
+        self.icon = string.format("|T%s:0|t", spellInfo.iconID)
     elseif type == "item" then
         C_Item.GetItemInfo(id) -- prime it
         C_Timer.After(0, function()
@@ -178,7 +178,9 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
             self.charges, self.maxCharges, startTime, duration, _ = GetSpellCharges(self.id)
             if self.charges == nil then
                 self.maxCharges = 1
-                startTime, duration, _, _ = GetSpellCooldown(self.id)
+                local spellCooldown = C_Spell.GetSpellCooldown(self.id) --[[@as SpellCooldownInfo]]
+                startTime = spellCooldown.startTime
+                duration = spellCooldown.duration
                 if startTime == 0 then
                     self.charges = 1
                 else

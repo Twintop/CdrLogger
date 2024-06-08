@@ -106,8 +106,8 @@ end
 
 function CdrLogger.Functions:GetCurrentGCDLockRemaining()
 ---@diagnostic disable-next-line: redundant-parameter
-    local startTime, duration, _ = GetSpellCooldown(61304);
-    return (startTime + duration - GetTime())
+    local spellCooldown = C_Spell.GetSpellCooldown(61304) --[[@as SpellCooldownInfo]]
+    return (spellCooldown.startTime + spellCooldown.duration - GetTime())
 end
 
 function CdrLogger.Functions:GetCurrentGCDTime(floor)
@@ -794,29 +794,33 @@ function SlashCmdList.CDRLOGGER(msg)
                 --if node.ranksPurchased > 0 then        
                     --print(node.activeEntry, "|", node.nextEntry, "|", node.entryIDs[1], configId, treeId, nodeId)
                     local entryInfo = C_Traits.GetEntryInfo(configId, entryId)
-                    local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
+                    if entryInfo.definitionID == nil then
+                        print(CdrLogger.Functions:TablePrint(entryInfo))
+                    else
+                        local definitionInfo = C_Traits.GetDefinitionInfo(entryInfo.definitionID)
 
-                    if definitionInfo ~= nil then
-                        local spellId = nil
-                        if definitionInfo.spellID ~= nil then
-                            spellId = definitionInfo.spellID
-                        elseif definitionInfo.overriddenSpellID ~= nil then
-                            spellId = definitionInfo.overriddenSpellID
-                        end
-
-                        if spellId ~= nil then
-                            name, _, icon = GetSpellInfo(spellId)
-                            iconString = string.format("|T%s:0|t", icon)
-
-                            local color = "FF00FF00"
-
-                            if node.ranksPurchased == 0 then
-                                color = "FFFF0000"
+                        if definitionInfo ~= nil then
+                            local spellId = nil
+                            if definitionInfo.spellID ~= nil then
+                                spellId = definitionInfo.spellID
+                            elseif definitionInfo.overriddenSpellID ~= nil then
+                                spellId = definitionInfo.overriddenSpellID
                             end
-                            
-                            print("|Hspell:" .. spellId .. "|h[" .. iconString .. " " .. name .. "]|h (|c" .. color .. spellId .. "|r [E: "..entryId..", N: "..nodeId.."]) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.ranksPurchased .. "/" .. node.maxRanks)
-                        --else
-                            --print(configId, treeId, nodeId, node.)
+
+                            if spellId ~= nil then
+                                local spellInfo = C_Spell.GetSpellInfo(spellId) --[[@as SpellInfo]]
+                                iconString = string.format("|T%s:0|t", spellInfo.originalIconID)
+
+                                local color = "FF00FF00"
+
+                                if node.ranksPurchased == 0 then
+                                    color = "FFFF0000"
+                                end
+                                
+                                print("|Hspell:" .. spellId .. "|h[" .. iconString .. " " .. spellInfo.name .. "]|h (|c" .. color .. spellId .. "|r [E: "..entryId..", N: "..nodeId.."]) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.ranksPurchased .. "/" .. node.maxRanks)
+                            --else
+                                --print(configId, treeId, nodeId, node.)
+                            end
                         end
                     end
                 end
