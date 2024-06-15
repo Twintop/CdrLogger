@@ -175,8 +175,8 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
 
     if force or self.tracking or self.onCooldown or self.charges < self.maxCharges then
         if self.type == "spell" then
-            self.charges, self.maxCharges, startTime, duration, _ = GetSpellCharges(self.id)
-            if self.charges == nil then
+            local spellCharges = C_Spell.GetSpellCharges(self.id)
+            if spellCharges == nil then
                 self.maxCharges = 1
                 local spellCooldown = C_Spell.GetSpellCooldown(self.id) --[[@as SpellCooldownInfo]]
                 startTime = spellCooldown.startTime
@@ -186,9 +186,15 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
                 else
                     self.charges = 0
                 end
-            elseif self.charges == self.maxCharges then
-                startTime = 0
-                duration = 0
+            else
+                self.charges = spellCharges.currentCharges
+                self.maxCharges = spellCharges.maxCharges
+                startTime = spellCharges.cooldownStartTime
+                duration = spellCharges.cooldownDuration
+                if self.charges == self.maxCharges then
+                    startTime = 0
+                    duration = 0
+                end
             end
 
             if self.latestCharges == -1 then

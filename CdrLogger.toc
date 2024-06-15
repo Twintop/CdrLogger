@@ -3,8 +3,8 @@
 ## Author: Twintop
 ## X-AuthorServer: Frostmourne-US/OCE
 ## Version: 11.0.0.0
-## X-ReleaseType: alpha01
-## X-ReleaseDate: June 08, 2024
+## X-ReleaseType: alpha02
+## X-ReleaseDate: June 15, 2024
 ## SavedVariables: CdrLoggerSettings
 ## DefaultState: enabled
 ## Notes: Logs events for spells or items that are affected by cooldown reduction effects.
