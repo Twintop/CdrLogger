@@ -776,6 +776,8 @@ function SlashCmdList.CDRLOGGER(msg)
         local _, name, icon, iconString
         local configId = C_ClassTalents.GetActiveConfigID()
         local configInfo = C_Traits.GetConfigInfo(configId)
+        print(configId)
+        print(CdrLogger.Functions:TablePrint(configInfo))
         for _, treeId in pairs(configInfo.treeIDs) do
             local nodes = C_Traits.GetTreeNodes(treeId)
             for _, nodeId in pairs(nodes) do
@@ -813,11 +815,17 @@ function SlashCmdList.CDRLOGGER(msg)
 
                                 local color = "FF00FF00"
 
-                                if node.ranksPurchased == 0 then
+                                if node.currentRank == 0 or (node.subTreeActive ~= nil and node.subTreeActive == false) then
                                     color = "FFFF0000"
                                 end
                                 
-                                print("|Hspell:" .. spellId .. "|h[" .. iconString .. " " .. spellInfo.name .. "]|h (|c" .. color .. spellId .. "|r [E: "..entryId..", N: "..nodeId.."]) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.ranksPurchased .. "/" .. node.maxRanks)
+                                print("|Hspell:" .. spellId .. "|h[" .. iconString .. " " .. spellInfo.name .. "]|h (|c" .. color .. spellId .. "|r [E: "..entryId..", N: "..nodeId.."]) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.currentRank .. "/" .. node.maxRanks)
+                                --[[if spellId == 445404 or spellId == 430703 then
+                                --if spellId == 270581 then
+                                    print("|Hspell:" .. spellId .. "|h[" .. iconString .. " " .. spellInfo.name .. "]|h (|c" .. color .. spellId .. "|r [E: "..entryId..", N: "..nodeId.."]) - NodeId = " .. nodeId .. ", DefinitionId = " .. entryInfo.definitionID .. ", Ranks = " .. node.currentRank .. "/" .. node.maxRanks)
+                                    print(CdrLogger.Functions:TablePrint(node))
+                                    print(CdrLogger.Functions:TablePrint(entryInfo))
+                                end]]
                             --else
                                 --print(configId, treeId, nodeId, node.)
                             end
