@@ -23,6 +23,7 @@ CdrLogger.Classes = CdrLogger.Classes or {}
 ---@field public originalEndTime number
 ---@field public originalStartTime number
 ---@field public tracking boolean
+---@field private infoLoaded boolean # Has this item or spell info been loaded?
 CdrLogger.Classes.Cooldown = {}
 CdrLogger.Classes.Cooldown.__index = CdrLogger.Classes.Cooldown
 
@@ -44,20 +45,47 @@ function CdrLogger.Classes.Cooldown:New(id, type)
         local spellInfo = C_Spell.GetSpellInfo(self.id) --[[@as SpellInfo]]
         self.name = spellInfo.name
         self.icon = string.format("|T%s:0|t", spellInfo.iconID)
+        self.infoLoaded = true
     elseif type == "item" then
-        C_Item.GetItemInfo(id) -- prime it
-        C_Timer.After(0, function()
-            C_Timer.After(1, function()
-                name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(id)
-                self.name = name
-                self.icon = string.format("|T%s:0|t", icon)
-            end)
-        end)
+        self:LoadItem(1)
     else
         return nil
     end
 
     return self
+end
+
+---Loads an item
+---@param self CdrLogger.Classes.Cooldown
+---@return boolean
+local function PerformItemLoad(self)
+    local name, icon
+    name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(self.id)
+    if icon == nil then
+        return false
+    else
+        self.name = name
+        self.icon = string.format("|T%s:0|t", icon)
+        return true
+    end
+end
+
+---Loads an item info
+---@param delay number? # Time in seconds to delay the lookup
+function CdrLogger.Classes.Cooldown:LoadItem(delay)
+    delay = delay or 1
+    if not self.infoLoaded then
+        if delay <= 0 then
+            self.infoLoaded = PerformItemLoad(self)
+        else
+            C_Item.GetItemInfo(self.id) -- prime it
+            C_Timer.After(0, function()
+                C_Timer.After(delay, function()
+                    self.infoLoaded = PerformItemLoad(self)
+                end)
+            end)
+        end
+    end
 end
 
 ---Resets the object to default values
@@ -160,6 +188,10 @@ function CdrLogger.Classes.Cooldown:Initialize(currentTime, osTimestamp)
         if not CdrLogger.Data.settings.core.time.usePreciseTimestamps then
     ---@diagnostic disable-next-line: cast-local-type
             outputTime = osTimestamp
+        end
+
+        if not self.infoLoaded then
+            self:LoadItem(0)
         end
         print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. self:GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. self:GetOutput() .. " -- " .. CdrLogger.Functions:RoundTo(self.duration, 3, floor))
     end
@@ -318,6 +350,10 @@ function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime)
     local outputLink = self:GetOutput()
 
     self:Refresh(true)
+
+    if not self.infoLoaded then
+        self:LoadItem(0)
+    end
     if self.maxCharges > 1 then
         if self.maxCharges == self.charges then
             print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
@@ -345,6 +381,10 @@ function CdrLogger.Classes.Cooldown:CooldownChanged(snapshot, fromCharges)
 
     local outputLink = self:GetOutput()
  
+
+    if not self.infoLoaded then
+        self:LoadItem(0)
+    end
     if self.maxCharges > 1 then
         if fromCharges then
             print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CHARGE USE: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
