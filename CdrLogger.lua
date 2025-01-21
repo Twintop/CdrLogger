@@ -79,9 +79,9 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
         if sourceGUID == CdrLogger.Data.characterGuid then
             local spells = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells
 
-            for x, v in pairs(spells) do
+            for _, v in pairs(spells) do
                 if spellId == tonumber(v) then
-                    if type == "SPELL_CAST_SUCCESS" then
+                    if type == "SPELL_CAST_SUCCESS" or type == "SPELL_EMPOWER_END" then
                         if tracked.spells[spellId] == nil then
 ---@diagnostic disable-next-line: need-check-nil
                             tracked.spells[spellId] = CdrLogger.Classes.Cooldown:New(spellId, "spell")
