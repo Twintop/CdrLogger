@@ -269,11 +269,16 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
     self:GetRemainingTime()
 end
 
-function CdrLogger.Classes.Cooldown:CooldownLogic(currentTime, osTimestamp)
+function CdrLogger.Classes.Cooldown:CooldownLogic(currentTime, osTimestamp, looped)
+    looped = (looped or 0) + 1
+    if looped > 1 then
+        print("CooldownLogic looped: " .. looped)
+        return
+    end
     currentTime = currentTime or GetTime()
     osTimestamp = osTimestamp or date()
     if self.tracking and (self.startTime == 0 or self.startTime == nil) then
-        self:CooldownFinished()
+        self:CooldownFinished(currentTime, osTimestamp, looped)
     elseif self.startTime ~= nil then
         local force = false
         local gcdLockRemaining = CdrLogger.Functions:GetCurrentGCDLockRemaining()
@@ -310,9 +315,9 @@ function CdrLogger.Classes.Cooldown:CooldownLogic(currentTime, osTimestamp)
         }
 
         if gcdLockRemaining == latestRemainingTime then
-            self:CooldownFinished(currentTime, outputTime)
+            self:CooldownFinished(currentTime, outputTime, looped)
         elseif self.latestCharges > previousCharges then
-            self:CooldownFinished(currentTime, outputTime)
+            self:CooldownFinished(currentTime, outputTime, looped)
         elseif self.latestCharges < previousCharges then
             self:CooldownChanged(snapshot, true)
         elseif force or previousRemainingTime ~= latestRemainingTime then
@@ -321,7 +326,8 @@ function CdrLogger.Classes.Cooldown:CooldownLogic(currentTime, osTimestamp)
     end
 end
 
-function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime)
+function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime, looped)
+    looped = looped or 0
     currentTime = currentTime or GetTime()
     local actualDuration = currentTime - self.originalStartTime
     local originalDuration = self.originalDuration
@@ -369,7 +375,12 @@ function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime)
         self:Reset()
     else
         self:SetOriginalLatest(currentTime)
-        self:CooldownLogic(currentTime)
+
+        if looped ~= nil and looped >= 2 then
+            return
+        else
+            self:CooldownLogic(currentTime, nil, looped)
+        end
     end
 end
 
