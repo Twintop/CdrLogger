@@ -272,7 +272,6 @@ end
 function CdrLogger.Classes.Cooldown:CooldownLogic(currentTime, osTimestamp, looped)
     looped = (looped or 0) + 1
     if looped > 1 then
-        print("CooldownLogic looped: " .. looped)
         return
     end
     currentTime = currentTime or GetTime()
