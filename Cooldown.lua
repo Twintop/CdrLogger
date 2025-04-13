@@ -77,7 +77,10 @@ function CdrLogger.Classes.Cooldown:LoadItem(delay)
         if delay <= 0 then
             self.infoLoaded = PerformItemLoad(self)
         else
-            C_Item.GetItemInfo(self.id) -- prime it
+            C_Timer.After(0, function()
+                C_Item.GetItemInfo(self.id) -- prime it
+            end)
+
             C_Timer.After(0, function()
                 C_Timer.After(delay, function()
                     self.infoLoaded = PerformItemLoad(self)

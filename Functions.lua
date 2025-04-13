@@ -813,20 +813,28 @@ function SlashCmdList.CDRLOGGER(msg)
     elseif cmd == "clear" then
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = {}
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items = {}
+        CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].buffs = {}
         CdrLogger.Data.tracked = {
             spells = {},
-            items = {}
+            items = {},
+            buffs = {}
         }
-        print("|cFF0000FFCDRL: |rTracked spells and items for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " cleared.")
+        CdrLogger.Data.auraInstanceIds = {}
+        CdrLogger.Functions:LoadSpecializationTrackedSpellsItems()
+        print("|cFF0000FFCDRL: |rTracked spells, items, and buffs for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " cleared.")
     elseif cmd == "reset" then
         local default = CdrLogger.Functions:GetDefaultSettings()
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = default[CdrLogger.Data.className][CdrLogger.Data.specName].spells
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].items = default[CdrLogger.Data.className][CdrLogger.Data.specName].items
+        CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].buffs = default[CdrLogger.Data.className][CdrLogger.Data.specName].buffs
         CdrLogger.Data.tracked = {
             spells = {},
-            items = {}
+            items = {},
+            buffs = {}
         }
-        print("|cFF0000FFCDRL: |rTracked spells and items for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " reset to defaults.")
+        CdrLogger.Data.auraInstanceIds = {}
+        CdrLogger.Functions:LoadSpecializationTrackedSpellsItems()
+        print("|cFF0000FFCDRL: |rTracked spells, items, and buffs for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. " reset to defaults.")
     elseif cmd == "timestamp" then
         local toggle = CdrLogger.Functions:ParseCmdString(subcmd)
 
@@ -929,6 +937,6 @@ function SlashCmdList.CDRLOGGER(msg)
             end
         end
     else
-        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {spell|item|buff} {id}, remove  {spell|item|buff} {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
+        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {spell|item|buff} {id}, remove {spell|item|buff} {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
     end
 end
