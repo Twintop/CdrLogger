@@ -2,12 +2,12 @@
 ## Title: Cooldown Reduction Logger
 ## Author: Twintop
 ## X-AuthorServer: Frostmourne-US/OCE
-## Version: 11.1.0.1
+## Version: 11.1.0.2
 ## X-ReleaseType: release
-## X-ReleaseDate: March 11, 2025
+## X-ReleaseDate: April 13, 2025
 ## SavedVariables: CdrLoggerSettings
 ## DefaultState: enabled
-## Notes: Logs events for spells or items that are affected by cooldown reduction effects.
+## Notes: Logs events for spells or items that are affected by cooldown reduction effects, and, buff duration/stack count changes.
 ## X-Category: combat
 ## X-Website: https://github.com/Twintop/CdrLogger
 ## X-Curse-Project-ID: 579843
@@ -15,4 +15,6 @@
 
 Functions.lua
 Cooldown.lua
+Aura.lua
+Snapshot.lua
 CdrLogger.lua

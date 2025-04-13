@@ -44,7 +44,7 @@ end
 
 function CdrLogger.Functions:RoundTo(num, numDecimalPlaces, mode)
     numDecimalPlaces = math.max(numDecimalPlaces or 0, 0)
-    local newNum = tonumber(num)
+    local newNum = tostring(tonumber(num))
     if mode == "floor" then
         local whole, decimal = strsplit(".", newNum, 2)
 
@@ -66,7 +66,7 @@ function CdrLogger.Functions:RoundTo(num, numDecimalPlaces, mode)
 
         if numDecimalPlaces == 0 then
             if (tonumber(whole) or 0) < num then
-                whole = (tonumber(whole) or 0) + 1
+                whole = tostring((tonumber(whole) or 0) + 1)
             end
 
             newNum = whole
@@ -178,31 +178,37 @@ function CdrLogger.Functions:GetDefaultSettings()
         DEATHKNIGHT = {
             BLOOD = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             FROST = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             UNHOLY = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
         },
         DEMONHUNTER = {
             HAVOC = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             VENGENCE = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
         },
         DRUID = {
             BALANCE = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             FERAL = {
                 items = {},
@@ -213,74 +219,88 @@ function CdrLogger.Functions:GetDefaultSettings()
             },
             GUARDIAN = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             RESTORATION = {
                 items = {
                     "188262" -- The Lion's Roar
                 },
-                spells = {}
+                spells = {},
+                buffs = {}
             }
         },
         EVOKER = {
             DEVASTATION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             PRESERVATION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             AUGMENTATION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             }
         },
         HUNTER = {
             BEASTMASTERY = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             MARKSMANSHIP = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             SURVIVAL = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             }
         },
         MAGE = {
             ARCANE = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             FIRE = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             FROST = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             }
         },
         MONK = {
             BREWMASTER = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             MISTWEAVER = {
                 items = {
                     "188262" -- The Lion's Roar
                 },
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             WINDWALKER = {
                 items = {},
                 spells = {
                     "107428", -- Rising Sun Kick
                     "113656" -- Fists of Fury
-                }
+                },
+                buffs = {}
             }
         },
         PALADIN = {
@@ -288,15 +308,18 @@ function CdrLogger.Functions:GetDefaultSettings()
                 items = {
                     "188262" -- The Lion's Roar
                 },
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             PROTECTION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             RETRIBUTION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             }
         },
         PRIEST = {
@@ -313,7 +336,8 @@ function CdrLogger.Functions:GetDefaultSettings()
                     "47540", -- Pennance
                     -- Shadowlands
                     "325013" -- Boon of the Ascended
-                }
+                },
+                buffs = {}
             },
             HOLY = {
                 items = {
@@ -335,7 +359,8 @@ function CdrLogger.Functions:GetDefaultSettings()
                     "33076", -- Prayer of Mending
                     -- Shadowlands
                     "325013", -- Boon of the Ascended
-                }
+                },
+                buffs = {}
             },
             SHADOW = {
                 items = {},
@@ -347,31 +372,37 @@ function CdrLogger.Functions:GetDefaultSettings()
                     "34433", -- Mindbender
                     -- Shadowlands
                     "325013", -- Boon of the Ascended
-                }
+                },
+                buffs = {}
             }
         },
         ROGUE = {
             ASSASSINATION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             OUTLAW = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             SUBTLETY = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             }
         },
         SHAMAN = {
             ELEMENTAL = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             ENHANCEMENT = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             RESTORATION = {
                 items = {
@@ -382,35 +413,42 @@ function CdrLogger.Functions:GetDefaultSettings()
                     "108280", -- Healing Tide Totem
                     "16191", -- Mana Tide Totem
                     "98008" -- Spirit Link Totem
-                }
+                },
+                buffs = {}
             }
         },
         WARLOCK = {
             AFFLICTION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             DEMONOLOGY = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             DESTRUCTION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             }
         },
         WARRIOR = {
             ARMS = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             FURY = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             },
             PROTECTION = {
                 items = {},
-                spells = {}
+                spells = {},
+                buffs = {}
             }
         }
     }
@@ -429,7 +467,7 @@ function CdrLogger.Functions:MergeSettings(settings, user)
 	for k, v in pairs(user) do
         -- For spell lists, we won't update/merge changes in here.
         -- TODO: Add/remove spells to be included as defaults manually through pseudo-migrations instead.
-        if k == "spells" then
+        if k == "spells" or k == "items" or k == "buffs" then
             settings[k] = v
         elseif (type(v) == "table") and (type(settings[k] or false) == "table") then
             CdrLogger.Functions:MergeSettings(settings[k], user[k])
@@ -445,7 +483,10 @@ function CdrLogger.Functions:AddTrackedId(className, specName, id, cooldownType)
         cooldownType = "spells"
     elseif cooldownType == "item" then
         cooldownType = "items"
+    elseif cooldownType == "buff" then
+        cooldownType = "buffs"
     end
+
     local exists = false
     local t = CdrLogger.Data.settings[className][specName][cooldownType]
     for x = 1, #t do
@@ -467,7 +508,10 @@ function CdrLogger.Functions:RemoveTrackedId(className, specName, id, cooldownTy
         cooldownType = "spells"
     elseif cooldownType == "item" then
         cooldownType = "items"
+    elseif cooldownType == "buff" then
+        cooldownType = "buffs"
     end
+
     local t = CdrLogger.Data.settings[className][specName][cooldownType]
     for x = 1, #t do
         if t[x] == id then
@@ -604,6 +648,17 @@ function CdrLogger.Functions:LoadSpecializationTrackedSpellsItems()
             tracked.items[v] = CdrLogger.Classes.Cooldown:New(v, "item")
         end
     end
+
+    local buffs = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].buffs
+    for x, v in pairs(buffs) do
+        local spellId = tonumber(v)
+        if tracked.buffs[spellId] == nil then
+---@diagnostic disable-next-line: need-check-nil
+            tracked.buffs[spellId] = CdrLogger.Classes.SnapshotBuff:New(spellId)
+        else
+            tracked.buffs[spellId]:Reset()
+        end
+    end
 end
 
 function CdrLogger.Functions:ParseCmdString(msg)
@@ -624,55 +679,80 @@ function SlashCmdList.CDRLOGGER(msg)
     local cmd, subcmd = CdrLogger.Functions:ParseCmdString(msg);
     if cmd == "add" then
         local type, id = CdrLogger.Functions:ParseCmdString(subcmd)
+        
         local outputLink = ""
         local typeName = ""
-
-        if type == "spell" or type == "spells" then
-            if CdrLogger.Data.tracked.spells[id] == nil then
-                CdrLogger.Data.tracked.spells[id] = CdrLogger.Classes.Cooldown:New(id, "spell")
-                outputLink = CdrLogger.Data.tracked.spells[id]:GetOutput(true)
-            end
-        elseif type == "item" or type == "items" then
-            if CdrLogger.Data.tracked.items[id] == nil then
-                CdrLogger.Data.tracked.items[id] = CdrLogger.Classes.Cooldown:New(id, "item")
-                outputLink = CdrLogger.Data.tracked.spells[id]:GetOutput(true)
-            end
-        else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add '" .. type .. "' to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". Supported types are 'spell' and 'item'.")
+        
+        if id == nil then
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add '" .. type .. "' to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". ID cannot be missing.")
             return
-        end
-
-        local result = CdrLogger.Functions:AddTrackedId(CdrLogger.Data.className, CdrLogger.Data.specName, id, type)
-        if result then
-            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in adding " .. typeName .. " " .. outputLink .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add " .. typeName .. " " .. id .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            if type == "spell" or type == "spells" then
+                if CdrLogger.Data.tracked.spells[id] == nil then
+                    CdrLogger.Data.tracked.spells[id] = CdrLogger.Classes.Cooldown:New(id, "spell")
+                    outputLink = CdrLogger.Data.tracked.spells[id]:GetOutput(true)
+                end
+            elseif type == "item" or type == "items" then
+                if CdrLogger.Data.tracked.items[id] == nil then
+                    CdrLogger.Data.tracked.items[id] = CdrLogger.Classes.Cooldown:New(id, "item")
+                    outputLink = CdrLogger.Data.tracked.items[id]:GetOutput(true)
+                end
+            elseif type == "buff" or type == "buffs" then
+                local spellId = tonumber(id)
+                if CdrLogger.Data.tracked.buffs[spellId] == nil then
+---@diagnostic disable-next-line: need-check-nil
+                    CdrLogger.Data.tracked.buffs[spellId] = CdrLogger.Classes.SnapshotBuff:New(spellId)
+                    outputLink = CdrLogger.Data.tracked.buffs[spellId]:GetOutput(true)
+                end
+            else
+                print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add '" .. type .. "' to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". Supported types are 'spell', 'item', and 'buff'.")
+                return
+            end
+
+            local result = CdrLogger.Functions:AddTrackedId(CdrLogger.Data.className, CdrLogger.Data.specName, id, type)
+            if result then
+                print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in adding " .. typeName .. " " .. outputLink .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            else
+                print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to add " .. typeName .. " " .. id .. " to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            end
         end
     elseif cmd == "remove" then
         local type, id = CdrLogger.Functions:ParseCmdString(subcmd)
         local outputLink = ""
         local typeName = ""
-
-        if type == "spell" or type == "spells" then
-            if CdrLogger.Data.tracked.spells[id] ~= nil then
-                outputLink = CdrLogger.Data.tracked.spells[id]:GetOutput(true)
-                CdrLogger.Data.tracked.spells[id] = nil
-            end
-        elseif type == "item" or type == "items" then
-            if CdrLogger.Data.tracked.items[id] ~= nil then
-                outputLink = CdrLogger.Data.tracked.items[id]:GetOutput(true)
-                CdrLogger.Data.tracked.items[id] = nil
-            end
-        else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove '" .. type .. "' from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". Supported types are 'spell' and 'item'.")
+        
+        if id == nil then
+            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove '" .. type .. "' to " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". ID cannot be missing.")
             return
-        end
-
-        local result = CdrLogger.Functions:RemoveTrackedId(CdrLogger.Data.className, CdrLogger.Data.specName, id, type)
-        if result then
-            print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in removing " .. typeName .. " " .. outputLink .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
         else
-            print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove " .. typeName .. " " .. outputLink .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            if type == "spell" or type == "spells" then
+                if CdrLogger.Data.tracked.spells[id] ~= nil then
+                    outputLink = CdrLogger.Data.tracked.spells[id]:GetOutput(true)
+                    CdrLogger.Data.tracked.spells[id] = nil
+                end
+            elseif type == "item" or type == "items" then
+                if CdrLogger.Data.tracked.items[id] ~= nil then
+                    outputLink = CdrLogger.Data.tracked.items[id]:GetOutput(true)
+                    CdrLogger.Data.tracked.items[id] = nil
+                end
+            elseif type == "buff" or type == "buffs" then
+                local spellId = tonumber(id)
+                if CdrLogger.Data.tracked.buffs[spellId] ~= nil then
+                    outputLink = CdrLogger.Data.tracked.buffs[spellId]:GetOutput(true)
+---@diagnostic disable-next-line: need-check-nil
+                    CdrLogger.Data.tracked.buffs[spellId] = nil
+                end
+            else
+                print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove '" .. type .. "' from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ". Supported types are 'spell', 'item', and 'buff'.")
+                return
+            end
+
+            local result = CdrLogger.Functions:RemoveTrackedId(CdrLogger.Data.className, CdrLogger.Data.specName, id, type)
+            if result then
+                print("|cFF0000FFCDRL: |r|cFF00FF00Succeeded|r in removing " .. typeName .. " " .. outputLink .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            else
+                print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove " .. typeName .. " " .. outputLink .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
+            end
         end
     elseif cmd == "start" or cmd == "on" then
         CdrLogger.Data.enabled = true
@@ -692,7 +772,7 @@ function SlashCmdList.CDRLOGGER(msg)
 ---@diagnostic disable-next-line: need-check-nil
                 tracked.spells[v] = CdrLogger.Classes.Cooldown:New(v, "spell")
             end
-            print(tracked.spells[v]:GetOutput())
+            print(tracked.spells[v]:GetOutput(true))
         end
         
         if found == false then
@@ -709,10 +789,26 @@ function SlashCmdList.CDRLOGGER(msg)
 ---@diagnostic disable-next-line: need-check-nil
                 tracked.items[v] = CdrLogger.Classes.Cooldown:New(v, "item")
             end
-            print(tracked.items[v]:GetOutput())
+            print(tracked.items[v]:GetOutput(true))
         end
         if found == false then
             print("No items tracked.")
+        end
+
+        print("|cFF0000FFCDRL: |rTracked buffs for " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className)
+        found = false
+        
+        local buffs = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].buffs
+        for x, v in pairs(buffs) do
+            found = true
+            if tracked.buffs[v] == nil then
+---@diagnostic disable-next-line: need-check-nil
+                tracked.buffs[v] = CdrLogger.Classes.SnapshotBuff:New(tonumber(v))
+            end
+            print(tracked.buffs[v]:GetOutput(true))
+        end
+        if found == false then
+            print("No buffs tracked.")
         end
     elseif cmd == "clear" then
         CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells = {}
@@ -756,9 +852,7 @@ function SlashCmdList.CDRLOGGER(msg)
             print("|cFF0000FFCDRL: Usage: /cdrl preciseTimestamp {on/off}")
         end
     elseif cmd == "timestampPrecision" then
-        local precision = CdrLogger.Functions:ParseCmdString(subcmd)
-
-        precision = tonumber(precision)
+        local precision = tonumber(CdrLogger.Functions:ParseCmdString(subcmd))
 
         if precision ~= nil then
             precision = CdrLogger.Functions:RoundTo(precision, 0, floor)
@@ -835,6 +929,6 @@ function SlashCmdList.CDRLOGGER(msg)
             end
         end
     else
-        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {spell|item} {id}, remove  {spell|item} {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
+        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {spell|item|buff} {id}, remove  {spell|item|buff} {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
     end
 end

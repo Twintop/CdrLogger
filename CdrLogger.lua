@@ -5,8 +5,11 @@ CdrLogger = CdrLogger or {}
 CdrLogger.Data = CdrLogger.Data or {}
 CdrLogger.Data.tracked = {
     items = {},
-    spells = {}
+    spells = {},
+    buffs = {}
 }
+CdrLogger.Data.auraInstanceIds = {}
+
 local tracked = CdrLogger.Data.tracked
 
 _, CdrLogger.Data.className, _ = UnitClass("player")
@@ -25,10 +28,13 @@ function CdrLogger:EventRegistration()
     if CdrLogger.Data.enabled then
         timerFrame:SetScript("OnUpdate", function(self, sinceLastUpdate) timerFrame:onUpdate(sinceLastUpdate) end)
         combatFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        CdrLogger.Functions.Aura:EnableUnitAura()
         print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFF00FF00enabled|r.")
     else
         timerFrame:SetScript("OnUpdate", nil)
         combatFrame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        CdrLogger.Functions.Aura:DisableUnitAura()
+        CdrLogger.Data.auraInstanceIds = {}
         print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFFFF0000disabled|r.")
     end
 end
@@ -132,3 +138,5 @@ containerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
     end
 end)
+
+CdrLogger_Data = CdrLogger.Data

@@ -40,7 +40,6 @@ function CdrLogger.Classes.Cooldown:New(id, type)
     self.icon = ""
     self.type = type
 
-    local name, icon
     if type == "spell" then
         local spellInfo = C_Spell.GetSpellInfo(self.id) --[[@as SpellInfo]]
         self.name = spellInfo.name
