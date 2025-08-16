@@ -1,10 +1,10 @@
-## Interface: 110105
+## Interface: 110200
 ## Title: Cooldown Reduction Logger
 ## Author: Twintop
 ## X-AuthorServer: Frostmourne-US/OCE
-## Version: 11.1.5.0
+## Version: 11.2.0.0
 ## X-ReleaseType: release
-## X-ReleaseDate: April 23, 2025
+## X-ReleaseDate: August 16, 2025
 ## SavedVariables: CdrLoggerSettings
 ## DefaultState: enabled
 ## Notes: Logs events for spells or items that are affected by cooldown reduction effects, and, buff duration/stack count changes.

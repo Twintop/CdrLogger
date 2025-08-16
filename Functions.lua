@@ -215,7 +215,8 @@ function CdrLogger.Functions:GetDefaultSettings()
                 spells = {
                     "106951", -- Berserk
                     "102543", -- Incarnation: King of the Jungle
-                }
+                },
+                buffs = {}
             },
             GUARDIAN = {
                 items = {},
