@@ -27,12 +27,12 @@ timerFrame.sinceLastUpdate = 0
 function CdrLogger:EventRegistration()
     if CdrLogger.Data.enabled then
         timerFrame:SetScript("OnUpdate", function(self, sinceLastUpdate) timerFrame:onUpdate(sinceLastUpdate) end)
-        combatFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        --combatFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         CdrLogger.Functions.Aura:EnableUnitAura()
         print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFF00FF00enabled|r.")
     else
         timerFrame:SetScript("OnUpdate", nil)
-        combatFrame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        --combatFrame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         CdrLogger.Functions.Aura:DisableUnitAura()
         CdrLogger.Data.auraInstanceIds = {}
         print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFFFF0000disabled|r.")
@@ -48,6 +48,11 @@ function timerFrame:onUpdate(sinceLastUpdate)
             if tracked.spells[x].tracking then
                 tracked.spells[x]:Refresh()
                 tracked.spells[x]:CooldownLogic(currentTime, osTimestamp)
+            else
+                local spellCooldown = C_Spell.GetSpellCharges(x) --[[@as SpellChargeInfo]]
+                if spellCooldown ~= nil and spellCooldown.maxCharges > spellCooldown.currentCharges then
+                    tracked.spells[x]:Initialize(currentTime, osTimestamp)
+                end
             end
         end
         
@@ -63,7 +68,7 @@ function timerFrame:onUpdate(sinceLastUpdate)
                 tracked.items[v]:Refresh()
                 tracked.items[v]:CooldownLogic(currentTime, osTimestamp)
             else
-                local startTime, duration, _ = C_Item.GetItemCooldown(v)
+                local startTime, _, _ = C_Item.GetItemCooldown(v)
 
                 if startTime ~= nil and startTime > 0 then
                     tracked.items[v]:Initialize(currentTime, osTimestamp)
@@ -75,6 +80,7 @@ function timerFrame:onUpdate(sinceLastUpdate)
     end
 end
 
+--[[
 combatFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 combatFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
@@ -98,7 +104,7 @@ combatFrame:SetScript("OnEvent", function(self, event, ...)
             end
         end
     end
-end)
+end)]]
 
 
 containerFrame:RegisterEvent("PLAYER_LOGOUT") -- Fired when about to log out
@@ -132,7 +138,7 @@ containerFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         end
        
         if event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_TALENT_UPDATE" or event == "PLAYER_SPECIALIZATION_CHANGED" then
-            CdrLogger.Data.specId = GetSpecialization()
+            CdrLogger.Data.specId = C_SpecializationInfo.GetSpecialization()
             CdrLogger.Data.specName = CdrLogger.Functions:LookupSpecializationName(CdrLogger.Data.className, CdrLogger.Data.specId)
             CdrLogger.Functions:LoadSpecializationTrackedSpellsItems()
         end
