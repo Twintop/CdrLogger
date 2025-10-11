@@ -372,7 +372,7 @@ function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime, lo
         print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
     end
     
-    if self.charges == self.maxCharges then
+    if self.charges == self.maxCharges or self.maxCharges <= 1 then
         self:Reset()
     else
         self:SetOriginalLatest(currentTime)

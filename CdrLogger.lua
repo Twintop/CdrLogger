@@ -27,12 +27,10 @@ timerFrame.sinceLastUpdate = 0
 function CdrLogger:EventRegistration()
     if CdrLogger.Data.enabled then
         timerFrame:SetScript("OnUpdate", function(self, sinceLastUpdate) timerFrame:onUpdate(sinceLastUpdate) end)
-        --combatFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         CdrLogger.Functions.Aura:EnableUnitAura()
         print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFF00FF00enabled|r.")
     else
         timerFrame:SetScript("OnUpdate", nil)
-        --combatFrame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
         CdrLogger.Functions.Aura:DisableUnitAura()
         CdrLogger.Data.auraInstanceIds = {}
         print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFFFF0000disabled|r.")
@@ -44,13 +42,19 @@ function timerFrame:onUpdate(sinceLastUpdate)
     local osTimestamp = date()
     self.sinceLastUpdate = self.sinceLastUpdate + sinceLastUpdate
     if self.sinceLastUpdate >= updateInterval then -- in seconds
+        local gcd = CdrLogger.Functions:GetCurrentGCDTime()
         for x, v in pairs(tracked.spells) do
             if tracked.spells[x].tracking then
                 tracked.spells[x]:Refresh()
                 tracked.spells[x]:CooldownLogic(currentTime, osTimestamp)
             else
-                local spellCooldown = C_Spell.GetSpellCharges(x) --[[@as SpellChargeInfo]]
-                if spellCooldown ~= nil and spellCooldown.maxCharges > spellCooldown.currentCharges then
+                local spellCharges = C_Spell.GetSpellCharges(x)
+                if spellCharges == nil then
+                    local spellCooldown = C_Spell.GetSpellCooldown(x) --[[@as SpellCooldownInfo]]
+                    if spellCooldown ~= nil and spellCooldown.startTime > 0 and spellCooldown.duration > gcd  then
+                        tracked.spells[x]:Initialize(currentTime, osTimestamp)
+                    end
+                elseif spellCharges.currentCharges < spellCharges.maxCharges then
                     tracked.spells[x]:Initialize(currentTime, osTimestamp)
                 end
             end
@@ -79,33 +83,6 @@ function timerFrame:onUpdate(sinceLastUpdate)
         self.sinceLastUpdate = 0
     end
 end
-
---[[
-combatFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-combatFrame:SetScript("OnEvent", function(self, event, ...)
-    if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-		local currentTime = GetTime()
-        local osTimestamp = date()
-        local time, type, _, sourceGUID, sourceName, _, _, destGUID, destName, _, _, spellId, spellName = CombatLogGetCurrentEventInfo()
-        
-        if sourceGUID == CdrLogger.Data.characterGuid then
-            local spells = CdrLogger.Data.settings[CdrLogger.Data.className][CdrLogger.Data.specName].spells
-
-            for _, v in pairs(spells) do
-                if spellId == tonumber(v) then
-                    if type == "SPELL_CAST_SUCCESS" or type == "SPELL_EMPOWER_END" then
-                        if tracked.spells[spellId] == nil then
----@diagnostic disable-next-line: need-check-nil
-                            tracked.spells[spellId] = CdrLogger.Classes.Cooldown:New(spellId, "spell")
-                        end
-                        tracked.spells[spellId]:Initialize(currentTime, osTimestamp)
-                    end
-                end
-            end
-        end
-    end
-end)]]
-
 
 containerFrame:RegisterEvent("PLAYER_LOGOUT") -- Fired when about to log out
 containerFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
