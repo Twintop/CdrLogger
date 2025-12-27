@@ -46,16 +46,39 @@ function timerFrame:onUpdate(sinceLastUpdate)
         for x, v in pairs(tracked.spells) do
             if tracked.spells[x].tracking then
                 tracked.spells[x]:Refresh()
-                tracked.spells[x]:CooldownLogic(currentTime, osTimestamp)
+                -- Check if still tracking after Refresh (may have been reset due to secret values)
+                if tracked.spells[x].tracking then
+                    tracked.spells[x]:CooldownLogic(currentTime, osTimestamp)
+                end
             else
                 local spellCharges = C_Spell.GetSpellCharges(x)
                 if spellCharges == nil then
                     local spellCooldown = C_Spell.GetSpellCooldown(x) --[[@as SpellCooldownInfo]]
-                    if spellCooldown ~= nil and spellCooldown.startTime > 0 and spellCooldown.duration > gcd  then
-                        tracked.spells[x]:Initialize(currentTime, osTimestamp)
+                    -- Check for secret values before comparing
+                    if spellCooldown ~= nil and not CdrLogger.Functions:HasSecretValue(spellCooldown.startTime, spellCooldown.duration) then
+                        if spellCooldown.startTime > 0 and spellCooldown.duration > gcd then
+                            -- Only initialize if not blocked from retracking
+                            if not tracked.spells[x].retrackBlocked then
+                                tracked.spells[x]:Initialize(currentTime, osTimestamp)
+                            end
+                        elseif spellCooldown.startTime == 0 then
+                            -- Spell is confirmed off cooldown, clear the retrack block
+                            tracked.spells[x].retrackBlocked = false
+                        end
                     end
-                elseif spellCharges.currentCharges < spellCharges.maxCharges then
-                    tracked.spells[x]:Initialize(currentTime, osTimestamp)
+                else
+                    -- Check for secret values before comparing
+                    if not CdrLogger.Functions:HasSecretValue(spellCharges.currentCharges, spellCharges.maxCharges) then
+                        if spellCharges.currentCharges < spellCharges.maxCharges then
+                            -- Only initialize if not blocked from retracking
+                            if not tracked.spells[x].retrackBlocked then
+                                tracked.spells[x]:Initialize(currentTime, osTimestamp)
+                            end
+                        elseif spellCharges.currentCharges == spellCharges.maxCharges then
+                            -- Spell has all charges, clear the retrack block
+                            tracked.spells[x].retrackBlocked = false
+                        end
+                    end
                 end
             end
         end
@@ -70,12 +93,24 @@ function timerFrame:onUpdate(sinceLastUpdate)
 
             if tracked.items[v].tracking then
                 tracked.items[v]:Refresh()
-                tracked.items[v]:CooldownLogic(currentTime, osTimestamp)
+                -- Check if still tracking after Refresh (may have been reset due to secret values)
+                if tracked.items[v].tracking then
+                    tracked.items[v]:CooldownLogic(currentTime, osTimestamp)
+                end
             else
                 local startTime, _, _ = C_Item.GetItemCooldown(v)
 
-                if startTime ~= nil and startTime > 0 then
-                    tracked.items[v]:Initialize(currentTime, osTimestamp)
+                -- Check for secret values before comparing
+                if startTime ~= nil and not issecretvalue(startTime) then
+                    if startTime > 0 then
+                        -- Only initialize if not blocked from retracking
+                        if not tracked.items[v].retrackBlocked then
+                            tracked.items[v]:Initialize(currentTime, osTimestamp)
+                        end
+                    else
+                        -- Item is confirmed off cooldown, clear the retrack block
+                        tracked.items[v].retrackBlocked = false
+                    end
                 end
             end
         end

@@ -1,6 +1,30 @@
 local _, CdrLogger = ...
 CdrLogger.Functions = CdrLogger.Functions or {}
 
+---Checks if a value is a Blizzard secret value (combat-protected API return).
+---Returns the fallback if the value is secret, otherwise returns the value itself.
+---@param value any # The value to check
+---@param fallback any # The value to return if the input is secret (default: nil)
+---@return any # The original value if not secret, or the fallback value if it is secret
+function CdrLogger.Functions:SecureValue(value, fallback)
+    if issecretvalue(value) then
+        return fallback
+    end
+    return value
+end
+
+---Checks if any of the provided values are Blizzard secret values.
+---@param ... any # Values to check
+---@return boolean # True if any value is secret, false otherwise
+function CdrLogger.Functions:HasSecretValue(...)
+    for i = 1, select("#", ...) do
+        if issecretvalue(select(i, ...)) then
+            return true
+        end
+    end
+    return false
+end
+
 function CdrLogger.Functions:TableLength(T)
 	local count = 0
 	if T ~= nil then
@@ -107,7 +131,11 @@ end
 function CdrLogger.Functions:GetCurrentGCDLockRemaining()
 ---@diagnostic disable-next-line: redundant-parameter
     local spellCooldown = C_Spell.GetSpellCooldown(61304) --[[@as SpellCooldownInfo]]
-    return (spellCooldown.startTime + spellCooldown.duration - GetTime())
+    -- Guard arithmetic on potentially secret values
+    if CdrLogger.Functions:HasSecretValue(spellCooldown.startTime, spellCooldown.duration) then
+        return 0
+    end
+    return spellCooldown.startTime + spellCooldown.duration - GetTime()
 end
 
 function CdrLogger.Functions:GetCurrentGCDTime(floor)
@@ -199,6 +227,11 @@ function CdrLogger.Functions:GetDefaultSettings()
                 buffs = {}
             },
             VENGENCE = {
+                items = {},
+                spells = {},
+                buffs = {}
+            },
+            DEVOURER = {
                 items = {},
                 spells = {},
                 buffs = {}
@@ -537,6 +570,8 @@ function CdrLogger.Functions:LookupSpecializationName(className, specId)
             return "HAVOC"
         elseif specId == 2 then
             return "VENGENCE"
+        elseif specId == 3 then
+            return "DEVOURER"
         end
     elseif className == "DRUID" then
         if specId == 1 then

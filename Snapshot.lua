@@ -127,11 +127,23 @@ function CdrLogger.Classes.SnapshotBuff:ParseBuffData(aura, osTimestamp)
     end
 
 	if aura ~= nil then
+        -- If we encounter secret values while tracking, stop tracking entirely
+        if self.isActive and CdrLogger.Functions:HasSecretValue(aura.expirationTime, aura.duration, aura.applications) then
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(GetTime()) .. "TRACKING STOPPED: |r" .. outputLink .. " -- Combat protected values detected")
+            self:Reset()
+            return nil
+        end
+
         local durationChanged = false
         local durationDelta = 0
         local applicationsChanged = false
 
-        if aura.expirationTime <= 0 or aura.duration <= 0 then
+        -- Guard aura time comparisons against secret values
+        local isSimpleMode = true
+        if not CdrLogger.Functions:HasSecretValue(aura.expirationTime, aura.duration) then
+            isSimpleMode = aura.expirationTime <= 0 or aura.duration <= 0
+        end
+        if isSimpleMode then
             -- Make sure we have the most up-to-date remaining time before we set the buff to simple mode
             self:GetRemainingTime()
             self.currentlySimple = true
@@ -139,52 +151,84 @@ function CdrLogger.Classes.SnapshotBuff:ParseBuffData(aura, osTimestamp)
             self.currentlySimple = false
         end
 
-        if self.endTime ~= aura.expirationTime and self.isActive then
-            durationDelta = aura.expirationTime - self.endTime
+        -- Guard endTime comparison against secret values
+        local expirationChanged = false
+        if not CdrLogger.Functions:HasSecretValue(self.endTime, aura.expirationTime) then
+            expirationChanged = self.endTime ~= aura.expirationTime and self.isActive
+        end
+        if expirationChanged then
+            if not CdrLogger.Functions:HasSecretValue(aura.expirationTime, self.endTime) then
+                durationDelta = aura.expirationTime - self.endTime
+            end
             self.durationChangeCount = self.durationChangeCount + 1
             self.durationDelta = self.durationDelta + durationDelta
             durationChanged = true
         end
 
-        if self.applications ~= aura.applications and self.applications > 0 and self.isActive then
+        -- Guard applications comparison against secret values
+        local appsChanged = false
+        if not CdrLogger.Functions:HasSecretValue(self.applications, aura.applications) then
+            appsChanged = self.applications ~= aura.applications and self.applications > 0 and self.isActive
+        end
+        if appsChanged then
             self.applicationsChangeCount = self.applicationsChangeCount + 1
             
-            if aura.applications > self.applications then
+            if not issecretvalue(aura.applications) and aura.applications > self.applications then
                 self.applicationsMax = aura.applications
             end
 
             applicationsChanged = true
         end
 
+        -- Guard applications comparison against secret values for output
+        local hasApplications = not issecretvalue(aura.applications) and aura.applications > 0
+        -- Safely get aura values for output, falling back to 0 if secret
+        local auraDuration = CdrLogger.Functions:SecureValue(aura.duration, 0)
+        local auraApplications = CdrLogger.Functions:SecureValue(aura.applications, 0)
+
         if not self.isActive then
-            if aura.applications > 0 then
-                print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF GAINED: |r" .. outputLink .. " (" .. aura.applications .. ") -- " .. CdrLogger.Functions:RoundTo(aura.duration, 3, floor))
+            if hasApplications then
+                print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF GAINED: |r" .. outputLink .. " (" .. auraApplications .. ") -- " .. CdrLogger.Functions:RoundTo(auraDuration, 3, floor))
             else
-                print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF GAINED: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(aura.duration, 3, floor))
+                print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF GAINED: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(auraDuration, 3, floor))
             end
         elseif applicationsChanged and durationChanged then
             self:GetRemainingTime()
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF CHANGE: |r" .. outputLink .. " (" .. self.applications .. " -> " .. aura.applications .. ") -- " .. CdrLogger.Functions:RoundTo(self.remaining, 3, floor) .. " + " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(durationDelta + self.remaining, 3, floor))
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF CHANGE: |r" .. outputLink .. " (" .. self.applications .. " -> " .. auraApplications .. ") -- " .. CdrLogger.Functions:RoundTo(self.remaining, 3, floor) .. " + " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(durationDelta + self.remaining, 3, floor))
         elseif durationChanged then
             self:GetRemainingTime()
             print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF CHANGE: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(self.remaining, 3, floor) .. " + " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(durationDelta + self.remaining, 3, floor))
         elseif applicationsChanged then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF CHANGE: |r" .. outputLink .. " (" .. self.applications .. " -> " .. aura.applications .. ")")
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF CHANGE: |r" .. outputLink .. " (" .. self.applications .. " -> " .. auraApplications .. ")")
         end
 
         self.previousRemaining = self.remaining
         self.auraInstanceId = aura.auraInstanceID
-		self.applications = aura.applications
-		self.duration = aura.duration
-		self.endTime = aura.expirationTime
+		self.applications = CdrLogger.Functions:SecureValue(aura.applications, self.applications)
+		self.duration = CdrLogger.Functions:SecureValue(aura.duration, self.duration)
+		self.endTime = CdrLogger.Functions:SecureValue(aura.expirationTime, self.endTime)
 
 		CdrLogger.Functions.Aura:StoreBuffAuraInstanceId(self)
 		return aura.spellId
 	else
+        -- Guard arithmetic on potentially secret values for BUFF LOST output
+        local remainingTime = 0
+        local totalTime = 0
+        local percentOfDuration = 0
+        if not issecretvalue(self.endTime) then
+            remainingTime = self.endTime - currentTime
+        end
+        if not issecretvalue(self.initialStartTime) then
+            totalTime = currentTime - self.initialStartTime
+        end
+        if not CdrLogger.Functions:HasSecretValue(self.initialStartTime, self.initialDuration) and self.initialDuration ~= 0 then
+            percentOfDuration = 100 * (((currentTime - self.initialStartTime)/self.initialDuration)-1)
+        end
+
         if self.applications > 0 then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "BUFF LOST: |r" .. outputLink .. " (" .. self.applications .. ") -- Remaining = " .. CdrLogger.Functions:RoundTo(self.endTime - currentTime, 3, floor) .. " | Total = " .. CdrLogger.Functions:RoundTo(currentTime - self.initialStartTime, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (((currentTime - self.initialStartTime)/self.initialDuration)-1), 3, floor) .. "% of " .. self.initialDuration .. ") | Delta = " .. CdrLogger.Functions:RoundTo(self.durationDelta, 3, floor))
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "BUFF LOST: |r" .. outputLink .. " (" .. self.applications .. ") -- Remaining = " .. CdrLogger.Functions:RoundTo(remainingTime, 3, floor) .. " | Total = " .. CdrLogger.Functions:RoundTo(totalTime, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(percentOfDuration, 3, floor) .. "% of " .. self.initialDuration .. ") | Delta = " .. CdrLogger.Functions:RoundTo(self.durationDelta, 3, floor))
         else
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "BUFF LOST: |r" .. outputLink .. " -- Remaining = " .. CdrLogger.Functions:RoundTo(self.endTime - currentTime, 3, floor) .. " | Total = " .. CdrLogger.Functions:RoundTo(currentTime - self.initialStartTime, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (((currentTime - self.initialStartTime)/self.initialDuration)-1), 3, floor) .. "% of " .. self.initialDuration .. ") | Delta = " .. CdrLogger.Functions:RoundTo(self.durationDelta, 3, floor))
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "BUFF LOST: |r" .. outputLink .. " -- Remaining = " .. CdrLogger.Functions:RoundTo(remainingTime, 3, floor) .. " | Total = " .. CdrLogger.Functions:RoundTo(totalTime, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(percentOfDuration, 3, floor) .. "% of " .. self.initialDuration .. ") | Delta = " .. CdrLogger.Functions:RoundTo(self.durationDelta, 3, floor))
         end
 		self:Reset()
 	end
@@ -202,7 +246,12 @@ function CdrLogger.Classes.SnapshotBuff:RefreshWithAuraData(auraData, osTimestam
 	self:ParseBuffData(auraData, osTimestamp)
 
     if isInitial then
-        self.initialStartTime = self.endTime - self.duration
+        -- Guard arithmetic on potentially secret values
+        if not CdrLogger.Functions:HasSecretValue(self.endTime, self.duration) then
+            self.initialStartTime = self.endTime - self.duration
+        else
+            self.initialStartTime = GetTime()
+        end
         self.initialEndTime = self.endTime
         self.initialDuration = self.duration
         self.initialApplications = self.applications
@@ -212,7 +261,9 @@ function CdrLogger.Classes.SnapshotBuff:RefreshWithAuraData(auraData, osTimestam
 		self.isActive = true
 	else
 		local currentTime = GetTime()
-		if self.endTime ~= nil and self.endTime > currentTime then
+        -- Guard endTime comparison against secret values
+        local isBuffActive = not issecretvalue(self.endTime) and self.endTime ~= nil and self.endTime > currentTime
+		if isBuffActive then
 			self.isActive = true
 			self:GetRemainingTime()
 		else

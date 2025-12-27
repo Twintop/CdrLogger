@@ -25,10 +25,13 @@ local function AuraUpdateEvent(self, event, unit, info)
 	if info.addedAuras then
 		if unit == "player" then
 			for _, v in pairs(info.addedAuras) do
-				local buff = CdrLogger.Data.tracked.buffs[v.spellId] --[[@as CdrLogger.Classes.SnapshotBuff]]
+				-- Guard against secret spellId values that can't be used as table indices
+				if not issecretvalue(v.spellId) then
+					local buff = CdrLogger.Data.tracked.buffs[v.spellId] --[[@as CdrLogger.Classes.SnapshotBuff]]
 
-				if buff ~= nil and v.sourceUnit == "player" then
-					buff:RefreshWithAuraData(v, osTimestamp, true)
+					if buff ~= nil and v.sourceUnit == "player" then
+						buff:RefreshWithAuraData(v, osTimestamp, true)
+					end
 				end
 			end
 		--[[else
@@ -46,10 +49,13 @@ local function AuraUpdateEvent(self, event, unit, info)
 	if info.updatedAuraInstanceIDs then
 		if unit == "player" then
 			for _, v in pairs(info.updatedAuraInstanceIDs) do
-				local buff = CdrLogger.Data.auraInstanceIds[v] --[[@as CdrLogger.Classes.SnapshotBuff]]
+				-- Guard against secret auraInstanceId values that can't be used as table indices
+				if not issecretvalue(v) then
+					local buff = CdrLogger.Data.auraInstanceIds[v] --[[@as CdrLogger.Classes.SnapshotBuff]]
 
-				if buff ~= nil then
-					buff:Refresh(osTimestamp, nil, unit)
+					if buff ~= nil then
+						buff:Refresh(osTimestamp, nil, unit)
+					end
 				end
 			end
 		--[[else
@@ -67,12 +73,15 @@ local function AuraUpdateEvent(self, event, unit, info)
 	if info.removedAuraInstanceIDs then
 		if unit == "player" then
 			for _, v in pairs(info.removedAuraInstanceIDs) do
-				local buff = CdrLogger.Data.auraInstanceIds[v] --[[@as CdrLogger.Classes.SnapshotBuff]]
+				-- Guard against secret auraInstanceId values that can't be used as table indices
+				if not issecretvalue(v) then
+					local buff = CdrLogger.Data.auraInstanceIds[v] --[[@as CdrLogger.Classes.SnapshotBuff]]
 
-				if buff ~= nil then
-					buff:Refresh(osTimestamp, nil, unit)
+					if buff ~= nil then
+						buff:Refresh(osTimestamp, nil, unit)
+					end
+					CdrLogger.Functions.Aura:RemoveBuffAuraInstanceId(v)
 				end
-				CdrLogger.Functions.Aura:RemoveBuffAuraInstanceId(v)
 			end
 		--[[else
 			for _, v in pairs(info.removedAuraInstanceIDs) do

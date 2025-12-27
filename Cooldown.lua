@@ -91,7 +91,8 @@ function CdrLogger.Classes.Cooldown:LoadItem(delay)
 end
 
 ---Resets the object to default values
-function CdrLogger.Classes.Cooldown:Reset()
+---@param blockRetrack boolean? # If true, prevents re-initialization until confirmed off cooldown
+function CdrLogger.Classes.Cooldown:Reset(blockRetrack)
     self.startTime = nil
     self.duration = 0
     self.remaining = 0
@@ -107,6 +108,9 @@ function CdrLogger.Classes.Cooldown:Reset()
     self.originalEndTime = 0
     self.originalStartTime = 0
     self.tracking = false
+    if blockRetrack then
+        self.retrackBlocked = true
+    end
 end
 
 ---Computes the time remaining on the Snapshot
@@ -127,15 +131,30 @@ function CdrLogger.Classes.Cooldown:GetRemainingTime(currentTime, totalTime)
 
     local remainingTime = 0
 
-    if self.startTime ~= nil and self.duration ~= nil and self.duration > 0 then
-		remainingTime = self.duration - (currentTime - self.startTime)
-	end
+    -- Guard arithmetic on potentially secret values
+    if self.startTime ~= nil and self.duration ~= nil then
+        if not CdrLogger.Functions:HasSecretValue(self.startTime, self.duration) and self.duration > 0 then
+            remainingTime = self.duration - (currentTime - self.startTime)
+        end
+    end
 
     self.remaining = remainingTime
     
-    if self.maxCharges > 1 and self.charges < self.maxCharges then
-        self.remainingTotal = self.remaining +  ((self.maxCharges - self.charges - 1) * self.duration)
-    elseif self.maxCharges > 1 and self.maxCharges == self.charges then
+    -- Guard charge comparisons against secret values
+    local hasMultiChargesOnCd = false
+    local hasFullCharges = false
+    if not CdrLogger.Functions:HasSecretValue(self.maxCharges, self.charges) then
+        hasMultiChargesOnCd = self.maxCharges > 1 and self.charges < self.maxCharges
+        hasFullCharges = self.maxCharges > 1 and self.maxCharges == self.charges
+    end
+
+    if hasMultiChargesOnCd then
+        if not CdrLogger.Functions:HasSecretValue(self.remaining, self.maxCharges, self.charges, self.duration) then
+            self.remainingTotal = self.remaining + ((self.maxCharges - self.charges - 1) * self.duration)
+        else
+            self.remainingTotal = self.remaining
+        end
+    elseif hasFullCharges then
         if self.onCooldown then
             self:CooldownFinished()
         end
@@ -147,7 +166,7 @@ function CdrLogger.Classes.Cooldown:GetRemainingTime(currentTime, totalTime)
 	if remainingTime <= 0 then
 		remainingTime = 0
         self.onCooldown = false
-    elseif self.charges > 0 then
+    elseif not issecretvalue(self.charges) and self.charges > 0 then
         self.onCooldown = false
     else
         self.onCooldown = true
@@ -207,25 +226,45 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
     local duration = 0
     local currentTime = GetTime()
 
-    if force or self.tracking or self.onCooldown or self.charges < self.maxCharges then
+    -- Guard charge comparison against secret values
+    local shouldRefresh = force or self.tracking or self.onCooldown
+    if not shouldRefresh and not CdrLogger.Functions:HasSecretValue(self.charges, self.maxCharges) then
+        shouldRefresh = self.charges < self.maxCharges
+    end
+    
+    if shouldRefresh then
         if self.type == "spell" then
             local spellCharges = C_Spell.GetSpellCharges(self.id)
             if spellCharges == nil then
                 self.maxCharges = 1
                 local spellCooldown = C_Spell.GetSpellCooldown(self.id) --[[@as SpellCooldownInfo]]
-                startTime = spellCooldown.startTime
-                duration = spellCooldown.duration
+                -- If we encounter secret values while tracking, stop tracking entirely
+                if self.tracking and CdrLogger.Functions:HasSecretValue(spellCooldown.startTime, spellCooldown.duration) then
+                    print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(GetTime()) .. "TRACKING STOPPED: |r" .. self:GetOutput() .. " -- Combat protected values detected")
+                    self:Reset(true)
+                    return
+                end
+                -- Guard against secret values when accessing cooldown info
+                startTime = CdrLogger.Functions:SecureValue(spellCooldown.startTime, 0)
+                duration = CdrLogger.Functions:SecureValue(spellCooldown.duration, 0)
                 if startTime == 0 then
                     self.charges = 1
                 else
                     self.charges = 0
                 end
             else
-                self.charges = spellCharges.currentCharges
-                self.maxCharges = spellCharges.maxCharges
-                startTime = spellCharges.cooldownStartTime
-                duration = spellCharges.cooldownDuration
-                if self.charges == self.maxCharges then
+                -- If we encounter secret values while tracking, stop tracking entirely
+                if self.tracking and CdrLogger.Functions:HasSecretValue(spellCharges.currentCharges, spellCharges.maxCharges, spellCharges.cooldownStartTime, spellCharges.cooldownDuration) then
+                    print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(GetTime()) .. "TRACKING STOPPED: |r" .. self:GetOutput() .. " -- Combat protected values detected")
+                    self:Reset(true)
+                    return
+                end
+                -- Guard against secret values when accessing charge info
+                self.charges = CdrLogger.Functions:SecureValue(spellCharges.currentCharges, self.charges)
+                self.maxCharges = CdrLogger.Functions:SecureValue(spellCharges.maxCharges, self.maxCharges)
+                startTime = CdrLogger.Functions:SecureValue(spellCharges.cooldownStartTime, 0)
+                duration = CdrLogger.Functions:SecureValue(spellCharges.cooldownDuration, 0)
+                if not CdrLogger.Functions:HasSecretValue(self.charges, self.maxCharges) and self.charges == self.maxCharges then
                     startTime = 0
                     duration = 0
                 end
@@ -236,6 +275,14 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
             end
         elseif self.type == "item" then
             startTime, duration = C_Item.GetItemCooldown(self.id)
+            -- If we encounter secret values while tracking, stop tracking entirely
+            if self.tracking and CdrLogger.Functions:HasSecretValue(startTime, duration) then
+                print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(GetTime()) .. "TRACKING STOPPED: |r" .. self:GetOutput() .. " -- Combat protected values detected")
+                self:Reset(true)
+                return
+            end
+            startTime = CdrLogger.Functions:SecureValue(startTime, 0)
+            duration = CdrLogger.Functions:SecureValue(duration, 0)
         else
             return
         end
@@ -248,15 +295,26 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
         local down, up, lagHome, lagWorld = GetNetStats()
         local latency = lagWorld / 1000
         
-        local remainingTime = startTime + duration - currentTime
+        -- Guard arithmetic on potentially secret values
+        local remainingTime = 0
+        if not CdrLogger.Functions:HasSecretValue(startTime, duration) then
+            remainingTime = startTime + duration - currentTime
+        end
 
-        if ((startTime ~= nil and startTime > 0 and not self.onCooldown and remainingTime > gcd + latency) or
-            (self.onCooldown and remainingTime > gcd + latency)) and (self.maxCharges == 1 or (self.maxCharges > 1 and self.charges < self.maxCharges))
-            then
+        -- Guard complex condition checks against secret values
+        local shouldSetCooldown = false
+        local shouldUpdateCooldown = false
+        if not CdrLogger.Functions:HasSecretValue(startTime, self.maxCharges, self.charges) then
+            shouldSetCooldown = ((startTime ~= nil and startTime > 0 and not self.onCooldown and remainingTime > gcd + latency) or
+                (self.onCooldown and remainingTime > gcd + latency)) and (self.maxCharges == 1 or (self.maxCharges > 1 and self.charges < self.maxCharges))
+            shouldUpdateCooldown = self.onCooldown and remainingTime > gcd + latency
+        end
+
+        if shouldSetCooldown then
             self.startTime = startTime
             self.duration = duration
             self.retryForceTime = nil
-        elseif self.onCooldown and remainingTime > gcd + latency then
+        elseif shouldUpdateCooldown then
             self.startTime = startTime
             self.duration = duration
             self.retryForceTime = nil
@@ -330,18 +388,32 @@ end
 function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime, looped)
     looped = looped or 0
     currentTime = currentTime or GetTime()
-    local actualDuration = currentTime - self.originalStartTime
-    local originalDuration = self.originalDuration
-    local durationDelta = currentTime - self.originalEndTime
-    local updateDurationDelta = currentTime - self.latestEndTime
+    -- Guard arithmetic on potentially secret values
+    local actualDuration = 0
+    local durationDelta = 0
+    local updateDurationDelta = 0
+    local previousRemainingTime = 0
     
-    local previousRemainingTime = self.latestEndTime - currentTime
+    if not issecretvalue(self.originalStartTime) then
+        actualDuration = currentTime - self.originalStartTime
+    end
+    local originalDuration = CdrLogger.Functions:SecureValue(self.originalDuration, 1)
+    if not issecretvalue(self.originalEndTime) then
+        durationDelta = currentTime - self.originalEndTime
+    end
+    if not issecretvalue(self.latestEndTime) then
+        updateDurationDelta = currentTime - self.latestEndTime
+        previousRemainingTime = self.latestEndTime - currentTime
+    end
 
     self.lastUpdatedTime = currentTime
     self.latestDuration = 0
     self.latestEndTime = currentTime
 
-    local originalRemainingTime = self.originalEndTime - currentTime
+    local originalRemainingTime = 0
+    if not issecretvalue(self.originalEndTime) then
+        originalRemainingTime = self.originalEndTime - currentTime
+    end
     local latestRemainingTime = self.latestEndTime - currentTime
 
     local snapshot = {
@@ -361,18 +433,37 @@ function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime, lo
     if not self.infoLoaded then
         self:LoadItem(0)
     end
-    if self.maxCharges > 1 then
-        if self.maxCharges == self.charges then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
+    -- Guard maxCharges comparison against secret values
+    local hasMultipleCharges = not issecretvalue(self.maxCharges) and self.maxCharges > 1
+    if hasMultipleCharges then
+        local isFullyCharged = not CdrLogger.Functions:HasSecretValue(self.maxCharges, self.charges) and self.maxCharges == self.charges
+        -- Safely get charge values for output
+        local chargesDisplay = CdrLogger.Functions:SecureValue(self.charges, 0)
+        local maxChargesDisplay = CdrLogger.Functions:SecureValue(self.maxCharges, 1)
+        local durationPercent = 0
+        if originalDuration ~= 0 then
+            durationPercent = 100 * (1 - (actualDuration/originalDuration))
+        end
+        if isFullyCharged then
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " (" .. chargesDisplay .. "/" .. maxChargesDisplay .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(durationPercent, 3, floor) .. "%)")
         else
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "CHARGE GAIN: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "CHARGE GAIN: |r" .. outputLink .. " (" .. chargesDisplay .. "/" .. maxChargesDisplay .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(durationPercent, 3, floor) .. "%)")
 
         end
     else
-        print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(100 * (1 - (actualDuration/originalDuration)), 3, floor) .. "%)")
+        local durationPercent = 0
+        if originalDuration ~= 0 then
+            durationPercent = 100 * (1 - (actualDuration/originalDuration))
+        end
+        print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(durationPercent, 3, floor) .. "%)")
     end
     
-    if self.charges == self.maxCharges or self.maxCharges <= 1 then
+    -- Guard charges/maxCharges comparisons
+    local shouldReset = true
+    if not CdrLogger.Functions:HasSecretValue(self.charges, self.maxCharges) then
+        shouldReset = self.charges == self.maxCharges or self.maxCharges <= 1
+    end
+    if shouldReset then
         self:Reset()
     else
         self:SetOriginalLatest(currentTime)
@@ -387,7 +478,8 @@ end
 
 function CdrLogger.Classes.Cooldown:CooldownChanged(snapshot, fromCharges)
     local x = snapshot.id
-    if snapshot.latestRemainingTime < 0 and not fromCharges then
+    -- Guard snapshot value comparison against secret values
+    if not issecretvalue(snapshot.latestRemainingTime) and snapshot.latestRemainingTime < 0 and not fromCharges then
         snapshot.latestRemainingTime = snapshot.previousRemainingTime
     end
 
@@ -397,14 +489,23 @@ function CdrLogger.Classes.Cooldown:CooldownChanged(snapshot, fromCharges)
     if not self.infoLoaded then
         self:LoadItem(0)
     end
-    if self.maxCharges > 1 then
+    -- Guard maxCharges comparison against secret values
+    local hasMultipleCharges = not issecretvalue(self.maxCharges) and self.maxCharges > 1
+    -- Safely get charge values for output
+    local chargesDisplay = CdrLogger.Functions:SecureValue(self.charges, 0)
+    local maxChargesDisplay = CdrLogger.Functions:SecureValue(self.maxCharges, 1)
+    local remainingDelta = 0
+    if not CdrLogger.Functions:HasSecretValue(snapshot.previousRemainingTime, snapshot.latestRemainingTime) then
+        remainingDelta = snapshot.previousRemainingTime - snapshot.latestRemainingTime
+    end
+    if hasMultipleCharges then
         if fromCharges then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CHARGE USE: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CHARGE USE: |r" .. outputLink .. " (" .. chargesDisplay .. "/" .. maxChargesDisplay .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(remainingDelta, 3, floor))
         else
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " (" .. self.charges .. "/" .. self.maxCharges .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
+            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " (" .. chargesDisplay .. "/" .. maxChargesDisplay .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(remainingDelta, 3, floor))
         end
     else
-        print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime - snapshot.latestRemainingTime, 3, floor))
+        print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(remainingDelta, 3, floor))
     end
 end
 
