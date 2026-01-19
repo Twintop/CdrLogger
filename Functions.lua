@@ -972,7 +972,17 @@ function SlashCmdList.CDRLOGGER(msg)
                 end
             end
         end
-    else
-        print("|cFF0000FFCooldown Reduction Logger (/cdrl)|r Available commands: on, off, add {spell|item|buff} {id}, remove {spell|item|buff} {id}, clear, reset, list, timestamp {on/off}, preciseTimestamp {on/off}, timestampPrecision {0-3}")
+    elseif cmd == "silly" then
+        local toggle = CdrLogger.Functions:ParseCmdString(subcmd)
+
+        if toggle == "on" then
+            CdrLogger.Classes:EnableSillyAura()
+            CdrLogger.Data.settings.core.sillyMode = true
+            print("|cFF0000FFCDRL: |rSilly mode |r|cFF00FF00enabled|r.")
+        elseif toggle == "off" then
+            CdrLogger.Classes:DisableSillyAura()
+            CdrLogger.Data.settings.core.sillyMode = false
+            print("|cFF0000FFCDRL: |rSilly mode |r|cFFFF0000disabled|r.")
+        end
     end
 end

@@ -17,4 +17,5 @@ Functions.lua
 Cooldown.lua
 Aura.lua
 Snapshot.lua
+Silly.lua
 CdrLogger.lua
