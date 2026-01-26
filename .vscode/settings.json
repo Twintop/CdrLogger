@@ -3,7 +3,8 @@
         "CdrLoggerSettings",
         "SlashCmdList",
         "OFF",
-        "UIParent"
+        "UIParent",
+        "LE_PARTY_CATEGORY_INSTANCE"
     ],
     "Lua.runtime.version": "Lua 5.1",
     "Lua.runtime.builtin": {

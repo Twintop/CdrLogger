@@ -530,7 +530,13 @@ local function SillyEventHandler(self, event, ...)
             local dadJoke = jokeList[fastrandom(1, #jokeList)];
             C_Timer.After(0, function()
                 C_Timer.After(3, function()
-                    C_ChatInfo.SendChatMessage(dadJoke, "INSTANCE_CHAT")
+                    if IsInRaid() then
+                        C_ChatInfo.SendChatMessage(dadJoke, "RAID")
+                    elseif IsInGroup() then
+                        C_ChatInfo.SendChatMessage(dadJoke, "PARTY")
+                    elseif IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+                        C_ChatInfo.SendChatMessage(dadJoke, "INSTANCE_CHAT")
+                    end
                 end)
             end)
         end
