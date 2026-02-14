@@ -790,9 +790,12 @@ function SlashCmdList.CDRLOGGER(msg)
                 print("|cFF0000FFCDRL: |r|cFFFF0000Failed|r to remove " .. typeName .. " " .. outputLink .. " from " .. CdrLogger.Data.specName .. " " .. CdrLogger.Data.className .. ".")
             end
         end
+    elseif cmd == "show" then
+        CdrLogger.LogWindow:Show()
     elseif cmd == "start" or cmd == "on" then
         CdrLogger.Data.enabled = true
         CdrLogger:EventRegistration()
+        CdrLogger.LogWindow:Show()
     elseif cmd == "stop" or cmd == "off" then
         CdrLogger.Data.enabled = false
         CdrLogger:EventRegistration()
@@ -984,5 +987,7 @@ function SlashCmdList.CDRLOGGER(msg)
             CdrLogger.Data.settings.core.sillyMode = false
             print("|cFF0000FFCDRL: |rSilly mode |r|cFFFF0000disabled|r.")
         end
+    else
+        print("|cFF0000FFCDRL: |rCommands: |cFFFFFF00on|r/|cFFFFFF00off|r, |cFFFFFF00show|r, |cFFFFFF00list|r, |cFFFFFF00add|r {spell|item|buff} {id}, |cFFFFFF00remove|r {spell|item|buff} {id}, |cFFFFFF00clear|r, |cFFFFFF00reset|r, |cFFFFFF00timestamp|r {on|off}, |cFFFFFF00preciseTimestamp|r {on|off}, |cFFFFFF00timestampPrecision|r {0-3}")
     end
 end

@@ -214,7 +214,18 @@ function CdrLogger.Classes.Cooldown:Initialize(currentTime, osTimestamp)
         if not self.infoLoaded then
             self:LoadItem(0)
         end
-        print("|c" .. CdrLogger.Data.settings.core.colors.cdStart .. self:GetOutputTimeIfAny(outputTime) .. "ON CD: |r" .. self:GetOutput() .. " -- " .. CdrLogger.Functions:RoundTo(self.duration, 3, floor))
+        local tabKey = self.type == "item" and "items" or "spells"
+        CdrLogger.LogWindow:AddLogEntry(tabKey, {
+            event = "ON CD",
+            icon = self.icon,
+            id = self.id,
+            name = self.name,
+            charges = self.maxCharges > 1 and (self.charges .. "/" .. self.maxCharges) or "",
+            prevRemain = "",
+            newRemain = CdrLogger.Functions:RoundTo(self.duration, 3, floor),
+            delta = "",
+            pctReduce = "",
+        })
     end
 end
 
@@ -240,7 +251,17 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
                 local spellCooldown = C_Spell.GetSpellCooldown(self.id) --[[@as SpellCooldownInfo]]
                 -- If we encounter secret values while tracking, stop tracking entirely
                 if self.tracking and CdrLogger.Functions:HasSecretValue(spellCooldown.startTime, spellCooldown.duration) then
-                    print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(GetTime()) .. "TRACKING STOPPED: |r" .. self:GetOutput() .. " -- Combat protected values detected")
+                    CdrLogger.LogWindow:AddLogEntry("spells", {
+                        event = "TRACKING STOPPED",
+                        icon = self.icon,
+                        id = self.id,
+                        name = self.name,
+                        charges = "",
+                        prevRemain = "",
+                        newRemain = "",
+                        delta = "",
+                        pctReduce = "",
+                    })
                     self:Reset(true)
                     return
                 end
@@ -255,7 +276,17 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
             else
                 -- If we encounter secret values while tracking, stop tracking entirely
                 if self.tracking and CdrLogger.Functions:HasSecretValue(spellCharges.currentCharges, spellCharges.maxCharges, spellCharges.cooldownStartTime, spellCharges.cooldownDuration) then
-                    print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(GetTime()) .. "TRACKING STOPPED: |r" .. self:GetOutput() .. " -- Combat protected values detected")
+                    CdrLogger.LogWindow:AddLogEntry("spells", {
+                        event = "TRACKING STOPPED",
+                        icon = self.icon,
+                        id = self.id,
+                        name = self.name,
+                        charges = "",
+                        prevRemain = "",
+                        newRemain = "",
+                        delta = "",
+                        pctReduce = "",
+                    })
                     self:Reset(true)
                     return
                 end
@@ -277,7 +308,17 @@ function CdrLogger.Classes.Cooldown:Refresh(force, retryForce)
             startTime, duration = C_Item.GetItemCooldown(self.id)
             -- If we encounter secret values while tracking, stop tracking entirely
             if self.tracking and CdrLogger.Functions:HasSecretValue(startTime, duration) then
-                print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(GetTime()) .. "TRACKING STOPPED: |r" .. self:GetOutput() .. " -- Combat protected values detected")
+                CdrLogger.LogWindow:AddLogEntry("items", {
+                    event = "TRACKING STOPPED",
+                    icon = self.icon,
+                    id = self.id,
+                    name = self.name,
+                    charges = "",
+                    prevRemain = "",
+                    newRemain = "",
+                    delta = "",
+                    pctReduce = "",
+                })
                 self:Reset(true)
                 return
             end
@@ -435,6 +476,7 @@ function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime, lo
     end
     -- Guard maxCharges comparison against secret values
     local hasMultipleCharges = not issecretvalue(self.maxCharges) and self.maxCharges > 1
+    local tabKey = self.type == "item" and "items" or "spells"
     if hasMultipleCharges then
         local isFullyCharged = not CdrLogger.Functions:HasSecretValue(self.maxCharges, self.charges) and self.maxCharges == self.charges
         -- Safely get charge values for output
@@ -444,18 +486,34 @@ function CdrLogger.Classes.Cooldown:CooldownFinished(currentTime, outputTime, lo
         if originalDuration ~= 0 then
             durationPercent = 100 * (1 - (actualDuration/originalDuration))
         end
-        if isFullyCharged then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " (" .. chargesDisplay .. "/" .. maxChargesDisplay .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(durationPercent, 3, floor) .. "%)")
-        else
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "CHARGE GAIN: |r" .. outputLink .. " (" .. chargesDisplay .. "/" .. maxChargesDisplay .. ") -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(durationPercent, 3, floor) .. "%)")
-
-        end
+        local eventName = isFullyCharged and "OFF CD" or "CHARGE GAIN"
+        CdrLogger.LogWindow:AddLogEntry(tabKey, {
+            event = eventName,
+            icon = self.icon,
+            id = self.id,
+            name = self.name,
+            charges = chargesDisplay .. "/" .. maxChargesDisplay,
+            prevRemain = CdrLogger.Functions:RoundTo(actualDuration, 3, floor),
+            newRemain = "",
+            delta = CdrLogger.Functions:RoundTo(durationDelta, 3, floor),
+            pctReduce = CdrLogger.Functions:RoundTo(durationPercent, 3, floor) .. "%",
+        })
     else
         local durationPercent = 0
         if originalDuration ~= 0 then
             durationPercent = 100 * (1 - (actualDuration/originalDuration))
         end
-        print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "OFF CD: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(actualDuration, 3, floor) .. " | Delta = " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(durationPercent, 3, floor) .. "%)")
+        CdrLogger.LogWindow:AddLogEntry(tabKey, {
+            event = "OFF CD",
+            icon = self.icon,
+            id = self.id,
+            name = self.name,
+            charges = "",
+            prevRemain = CdrLogger.Functions:RoundTo(actualDuration, 3, floor),
+            newRemain = "",
+            delta = CdrLogger.Functions:RoundTo(durationDelta, 3, floor),
+            pctReduce = CdrLogger.Functions:RoundTo(durationPercent, 3, floor) .. "%",
+        })
     end
     
     -- Guard charges/maxCharges comparisons
@@ -498,15 +556,24 @@ function CdrLogger.Classes.Cooldown:CooldownChanged(snapshot, fromCharges)
     if not CdrLogger.Functions:HasSecretValue(snapshot.previousRemainingTime, snapshot.latestRemainingTime) then
         remainingDelta = snapshot.previousRemainingTime - snapshot.latestRemainingTime
     end
-    if hasMultipleCharges then
-        if fromCharges then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CHARGE USE: |r" .. outputLink .. " (" .. chargesDisplay .. "/" .. maxChargesDisplay .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(remainingDelta, 3, floor))
-        else
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " (" .. chargesDisplay .. "/" .. maxChargesDisplay .. ") -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(remainingDelta, 3, floor))
-        end
+    local tabKey = self.type == "item" and "items" or "spells"
+    local eventName
+    if hasMultipleCharges and fromCharges then
+        eventName = "CHARGE USE"
     else
-        print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(snapshot.outputTime) .. "CD CHANGE: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor) .. " - " .. CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(remainingDelta, 3, floor))
+        eventName = "CD CHANGE"
     end
+    CdrLogger.LogWindow:AddLogEntry(tabKey, {
+        event = eventName,
+        icon = self.icon,
+        id = self.id,
+        name = self.name,
+        charges = hasMultipleCharges and (chargesDisplay .. "/" .. maxChargesDisplay) or "",
+        prevRemain = CdrLogger.Functions:RoundTo(snapshot.previousRemainingTime, 3, floor),
+        newRemain = CdrLogger.Functions:RoundTo(snapshot.latestRemainingTime, 3, floor),
+        delta = CdrLogger.Functions:RoundTo(remainingDelta, 3, floor),
+        pctReduce = "",
+    })
 end
 
 function CdrLogger.Classes.Cooldown:GetOutputTimeIfAny(timeInput)

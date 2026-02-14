@@ -17,6 +17,11 @@ CdrLogger.Data.specName = nil
 CdrLogger.Data.specId = 0
 CdrLogger.Data.characterGuid = UnitGUID("player")
 CdrLogger.Data.enabled = false
+CdrLogger.Data.log = {
+    spells = {},
+    items = {},
+    buffs = {}
+}
 
 -- Frames
 local containerFrame = CreateFrame("Frame", "CdrLoggerFrame", UIParent, "BackdropTemplate")
@@ -28,10 +33,12 @@ function CdrLogger:EventRegistration()
     if CdrLogger.Data.enabled then
         timerFrame:SetScript("OnUpdate", function(self, sinceLastUpdate) timerFrame:onUpdate(sinceLastUpdate) end)
         CdrLogger.Functions.Aura:EnableUnitAura()
+        CdrLogger.Functions.SpellCast:Enable()
         print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFF00FF00enabled|r.")
     else
         timerFrame:SetScript("OnUpdate", nil)
         CdrLogger.Functions.Aura:DisableUnitAura()
+        CdrLogger.Functions.SpellCast:Disable()
         CdrLogger.Data.auraInstanceIds = {}
         print("|c" .. CdrLogger.Data.settings.core.colors.status .. "CDRL: |rCDR logging |cFFFF0000disabled|r.")
     end

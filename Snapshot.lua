@@ -129,7 +129,17 @@ function CdrLogger.Classes.SnapshotBuff:ParseBuffData(aura, osTimestamp)
 	if aura ~= nil then
         -- If we encounter secret values while tracking, stop tracking entirely
         if self.isActive and CdrLogger.Functions:HasSecretValue(aura.expirationTime, aura.duration, aura.applications) then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(GetTime()) .. "TRACKING STOPPED: |r" .. outputLink .. " -- Combat protected values detected")
+            CdrLogger.LogWindow:AddLogEntry("buffs", {
+                event = "TRACKING STOPPED",
+                icon = self.icon,
+                id = self.id,
+                name = self.name,
+                stacks = "",
+                duration = "",
+                remaining = "",
+                delta = "",
+                pctInitial = "",
+            })
             self:Reset()
             return nil
         end
@@ -187,19 +197,55 @@ function CdrLogger.Classes.SnapshotBuff:ParseBuffData(aura, osTimestamp)
         local auraApplications = CdrLogger.Functions:SecureValue(aura.applications, 0)
 
         if not self.isActive then
-            if hasApplications then
-                print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF GAINED: |r" .. outputLink .. " (" .. auraApplications .. ") -- " .. CdrLogger.Functions:RoundTo(auraDuration, 3, floor))
-            else
-                print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF GAINED: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(auraDuration, 3, floor))
-            end
+            CdrLogger.LogWindow:AddLogEntry("buffs", {
+                event = "GAINED",
+                icon = self.icon,
+                id = self.id,
+                name = self.name,
+                stacks = hasApplications and tostring(auraApplications) or "",
+                duration = CdrLogger.Functions:RoundTo(auraDuration, 3, floor),
+                remaining = "",
+                delta = "",
+                pctInitial = "",
+            })
         elseif applicationsChanged and durationChanged then
             self:GetRemainingTime()
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF CHANGE: |r" .. outputLink .. " (" .. self.applications .. " -> " .. auraApplications .. ") -- " .. CdrLogger.Functions:RoundTo(self.remaining, 3, floor) .. " + " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(durationDelta + self.remaining, 3, floor))
+            CdrLogger.LogWindow:AddLogEntry("buffs", {
+                event = "CHANGE",
+                icon = self.icon,
+                id = self.id,
+                name = self.name,
+                stacks = self.applications .. " -> " .. auraApplications,
+                duration = "",
+                remaining = CdrLogger.Functions:RoundTo(self.remaining, 3, floor),
+                delta = CdrLogger.Functions:RoundTo(durationDelta, 3, floor),
+                pctInitial = CdrLogger.Functions:RoundTo(durationDelta + self.remaining, 3, floor),
+            })
         elseif durationChanged then
             self:GetRemainingTime()
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF CHANGE: |r" .. outputLink .. " -- " .. CdrLogger.Functions:RoundTo(self.remaining, 3, floor) .. " + " .. CdrLogger.Functions:RoundTo(durationDelta, 3, floor) .. " = " .. CdrLogger.Functions:RoundTo(durationDelta + self.remaining, 3, floor))
+            CdrLogger.LogWindow:AddLogEntry("buffs", {
+                event = "CHANGE",
+                icon = self.icon,
+                id = self.id,
+                name = self.name,
+                stacks = "",
+                duration = "",
+                remaining = CdrLogger.Functions:RoundTo(self.remaining, 3, floor),
+                delta = CdrLogger.Functions:RoundTo(durationDelta, 3, floor),
+                pctInitial = CdrLogger.Functions:RoundTo(durationDelta + self.remaining, 3, floor),
+            })
         elseif applicationsChanged then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdChange .. self:GetOutputTimeIfAny(outputTime) .. "BUFF CHANGE: |r" .. outputLink .. " (" .. self.applications .. " -> " .. auraApplications .. ")")
+            CdrLogger.LogWindow:AddLogEntry("buffs", {
+                event = "CHANGE",
+                icon = self.icon,
+                id = self.id,
+                name = self.name,
+                stacks = self.applications .. " -> " .. auraApplications,
+                duration = "",
+                remaining = "",
+                delta = "",
+                pctInitial = "",
+            })
         end
 
         self.previousRemaining = self.remaining
@@ -226,9 +272,29 @@ function CdrLogger.Classes.SnapshotBuff:ParseBuffData(aura, osTimestamp)
         end
 
         if self.applications > 0 then
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "BUFF LOST: |r" .. outputLink .. " (" .. self.applications .. ") -- Remaining = " .. CdrLogger.Functions:RoundTo(remainingTime, 3, floor) .. " | Total = " .. CdrLogger.Functions:RoundTo(totalTime, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(percentOfDuration, 3, floor) .. "% of " .. self.initialDuration .. ") | Delta = " .. CdrLogger.Functions:RoundTo(self.durationDelta, 3, floor))
+            CdrLogger.LogWindow:AddLogEntry("buffs", {
+                event = "LOST",
+                icon = self.icon,
+                id = self.id,
+                name = self.name,
+                stacks = tostring(self.applications),
+                duration = CdrLogger.Functions:RoundTo(totalTime, 3, floor),
+                remaining = CdrLogger.Functions:RoundTo(remainingTime, 3, floor),
+                delta = CdrLogger.Functions:RoundTo(self.durationDelta, 3, floor),
+                pctInitial = CdrLogger.Functions:RoundTo(percentOfDuration, 3, floor) .. "% of " .. self.initialDuration,
+            })
         else
-            print("|c" .. CdrLogger.Data.settings.core.colors.cdEnd .. self:GetOutputTimeIfAny(outputTime) .. "BUFF LOST: |r" .. outputLink .. " -- Remaining = " .. CdrLogger.Functions:RoundTo(remainingTime, 3, floor) .. " | Total = " .. CdrLogger.Functions:RoundTo(totalTime, 3, floor) .. " (" .. CdrLogger.Functions:RoundTo(percentOfDuration, 3, floor) .. "% of " .. self.initialDuration .. ") | Delta = " .. CdrLogger.Functions:RoundTo(self.durationDelta, 3, floor))
+            CdrLogger.LogWindow:AddLogEntry("buffs", {
+                event = "LOST",
+                icon = self.icon,
+                id = self.id,
+                name = self.name,
+                stacks = "",
+                duration = CdrLogger.Functions:RoundTo(totalTime, 3, floor),
+                remaining = CdrLogger.Functions:RoundTo(remainingTime, 3, floor),
+                delta = CdrLogger.Functions:RoundTo(self.durationDelta, 3, floor),
+                pctInitial = CdrLogger.Functions:RoundTo(percentOfDuration, 3, floor) .. "% of " .. self.initialDuration,
+            })
         end
 		self:Reset()
 	end
