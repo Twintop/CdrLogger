@@ -1,0 +1,14 @@
+# BigWigs packager metadata. .github/workflows/release.yml runs the packager with -m .pkgmeta on every release tag.
+# There is no manual-changelog, so the packager writes the changelog from the git commits since the previous tag.
+package-as: CdrLogger
+
+enable-nolib-creation: no
+
+ignore:
+    - build
+    - dist
+    - .github
+    - .vscode
+    - .claude
+    - CLAUDE.md
+    - .pkgmeta

@@ -1,0 +1,127 @@
+name: Release
+
+# Tags:
+#   12.0.1.1-release  -> release
+#   12.0.1.1-beta01   -> pre-release
+#   12.0.1.1-alpha01  -> pre-release
+# The checks job runs checks.yml, the same offline checks every pull request runs. The stage job then builds the
+# zip with build/stage.ps1 as a workflow artifact.
+# The publish job runs the BigWigs packager, which creates the GitHub release, attaches its zip, and
+# uploads to CurseForge / Wago for every site whose token secret exists. Its changelog is generated from
+# the git commits since the previous tag. A workflow_dispatch run only builds the zip.
+
+on:
+  push:
+    tags:
+      - "*-release"
+      - "*-beta*"
+      - "*-alpha*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to stamp (blank keeps the TOC value)"
+        required: false
+        default: ""
+      releaseType:
+        description: "release, beta or alpha"
+        required: false
+        default: "alpha"
+
+permissions:
+  contents: write
+
+jobs:
+  checks:
+    name: Checks
+    uses: ./.github/workflows/checks.yml
+
+  stage:
+    name: Stage
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version from the tag
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            RELEASE_TYPE="${{ github.event.inputs.releaseType }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            if [[ "$TAG" =~ ^([0-9][0-9.]*)-(release|beta[0-9]*|alpha[0-9]*)$ ]]; then
+              VERSION="${BASH_REMATCH[1]}"; RELEASE_TYPE="${BASH_REMATCH[2]}"
+            else
+              echo "Tag '$TAG' is not x.y.z.w-<release|betaNN|alphaNN>"; exit 1
+            fi
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "releaseType=$RELEASE_TYPE" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION type=$RELEASE_TYPE"
+
+      - name: Require the tag version to match the TOC
+        if: steps.meta.outputs.version != ''
+        shell: bash
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          TOC_VERSION="$(tr -d '\r' < CdrLogger.toc | sed -n 's/^\xEF\xBB\xBF//; s/^## Version:[[:space:]]*//p' | head -n 1)"
+          if [ "$TOC_VERSION" = "$VERSION" ]; then echo "CdrLogger.toc is $TOC_VERSION"; exit 0; fi
+          echo "Tag version $VERSION does not match CdrLogger.toc (## Version: $TOC_VERSION)."
+          exit 1
+
+      - name: Stage
+        shell: pwsh
+        run: |
+          $zip = ./build/stage.ps1 -Version "${{ steps.meta.outputs.version }}" -ReleaseType "${{ steps.meta.outputs.releaseType }}" -OutDir "${{ github.workspace }}/dist" | Select-Object -Last 1
+          "ZIP_PATH=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Upload staged zip as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: staged-${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.releaseType }}
+          path: ${{ env.ZIP_PATH }}
+          if-no-files-found: error
+
+  publish:
+    # The packager reads the game type from the TOC and the site ids from its X-Curse-Project-ID / X-Wago-ID
+    # lines. It skips any site whose token is missing. The TOC has no X-WoWI-ID, so WoWInterface is not used.
+    name: Package and publish
+    needs: stage
+    runs-on: ubuntu-latest
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve packager arguments
+        id: pkg
+        shell: bash
+        run: |
+          ARGS="-m .pkgmeta -g retail"
+          # A manual run is a build-only dry run.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then ARGS="$ARGS -d"; fi
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+          echo "$ARGS"
+
+      - name: Package and upload with the BigWigs packager
+        uses: BigWigsMods/packager@v2
+        with:
+          args: ${{ steps.pkg.outputs.args }}
+
+      - name: Upload packager zip as a workflow artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: packager
+          path: .release/*.zip
+          if-no-files-found: error
+          # .release is a hidden folder, which upload-artifact skips by default.
+          include-hidden-files: true
